@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
 import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
+import com.turkcell.rencarapp.ui.license.LicenseRoute
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
@@ -121,7 +122,14 @@ fun RenCarNavHost(
                     )
                 }
                 composable(RenCarDestination.License) {
-                    PlaceholderScreen(title = "Ehliyet Doğrulama")
+                    LicenseRoute(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToMain = {
+                            navController.navigate(RenCarDestination.Map) {
+                                popUpTo(RenCarDestination.AuthGraph) { inclusive = true }
+                            }
+                        },
+                    )
                 }
             }
 
