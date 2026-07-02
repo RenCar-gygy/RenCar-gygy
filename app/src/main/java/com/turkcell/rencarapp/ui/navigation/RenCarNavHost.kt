@@ -22,6 +22,7 @@ import androidx.navigation.navArgument
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
 import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
 import com.turkcell.rencarapp.ui.license.LicenseRoute
+import com.turkcell.rencarapp.ui.map.MapRoute
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
@@ -138,7 +139,11 @@ fun RenCarNavHost(
                 route = RenCarDestination.MainGraph,
             ) {
                 composable(RenCarDestination.Map) {
-                    PlaceholderScreen(title = "Ana Harita")
+                    MapRoute(
+                        onNavigateToVehicleDetail = { vehicleId ->
+                            navController.navigate(RenCarDestination.vehicleDetailRoute(vehicleId))
+                        },
+                    )
                 }
                 composable(RenCarDestination.RentalHistory) {
                     PlaceholderScreen(title = "Kiralama Geçmişi")
