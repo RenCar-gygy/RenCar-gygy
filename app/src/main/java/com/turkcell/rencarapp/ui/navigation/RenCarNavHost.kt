@@ -20,6 +20,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
+import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
@@ -88,8 +89,8 @@ fun RenCarNavHost(
                 composable(RenCarDestination.Login) {
                     LoginRoute(
                         onNavigateBack = { navController.popBackStack() },
-                        onNavigateToOtp = {
-                            navController.navigate(RenCarDestination.Otp) {
+                        onNavigateToOtp = { phone ->
+                            navController.navigate(RenCarDestination.otpRoute(phone)) {
                                 launchSingleTop = true
                             }
                         },
@@ -103,8 +104,21 @@ fun RenCarNavHost(
                 composable(RenCarDestination.Register) {
                     PlaceholderScreen(title = "Kayıt")
                 }
-                composable(RenCarDestination.Otp) {
-                    PlaceholderScreen(title = "OTP Doğrulama")
+                composable(
+                    route = RenCarDestination.Otp,
+                    arguments = listOf(
+                        navArgument(RenCarDestination.ARG_PHONE_NUMBER) { type = NavType.StringType },
+                    ),
+                ) {
+                    OtpRoute(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToLogin = { navController.popBackStack() },
+                        onNavigateToLicense = {
+                            navController.navigate(RenCarDestination.License) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
                 composable(RenCarDestination.License) {
                     PlaceholderScreen(title = "Ehliyet Doğrulama")
