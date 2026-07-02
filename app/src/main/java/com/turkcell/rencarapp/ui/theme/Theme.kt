@@ -36,7 +36,12 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun RenCarAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+<<<<<<< HEAD
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = true,
+=======
     dynamicColor: Boolean = false,
+>>>>>>> ca29a1566da29a41f85112a2361ab3461ff511fb
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
