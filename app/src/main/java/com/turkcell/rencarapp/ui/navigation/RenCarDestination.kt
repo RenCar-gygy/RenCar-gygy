@@ -15,7 +15,8 @@ object RenCarDestination {
     const val Onboarding = "auth/onboarding"
     const val Login = "auth/login"
     const val Register = "auth/register"
-    const val Otp = "auth/otp"
+    const val ARG_PHONE_NUMBER = "phoneNumber"
+    const val Otp = "auth/otp/{$ARG_PHONE_NUMBER}"
     const val License = "auth/license"
 
     // --- Main grafiği ---
@@ -45,6 +46,8 @@ object RenCarDestination {
     fun deliveryPhotosRoute(vehicleId: String): String = "rental/delivery_photos/$vehicleId"
 
     fun activeRentalRoute(rentalId: String): String = "rental/active/$rentalId"
+
+    fun otpRoute(phoneNumber: String): String = "auth/otp/$phoneNumber"
 
     val bottomBarRoutes = setOf(Map, RentalHistory, Wallet, Profile)
 }
