@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.turkcell.rencarapp.ui.splash.SplashRoute
 
 /**
  * Sprint 0 navigasyon iskeleti — iç içe grafikler.
@@ -54,7 +55,18 @@ fun RenCarNavHost(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(RenCarDestination.Splash) {
-                PlaceholderScreen(title = "Splash")
+                SplashRoute(
+                    onNavigateToOnboarding = {
+                        navController.navigate(RenCarDestination.Onboarding) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate(RenCarDestination.Login) {
+                            launchSingleTop = true
+                        }
+                    },
+                )
             }
 
             navigation(
