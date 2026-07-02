@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
 
 /**
@@ -74,7 +75,13 @@ fun RenCarNavHost(
                 route = RenCarDestination.AuthGraph,
             ) {
                 composable(RenCarDestination.Onboarding) {
-                    PlaceholderScreen(title = "Onboarding")
+                    OnboardingRoute(
+                        onNavigateToRegister = {
+                            navController.navigate(RenCarDestination.Register) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
                 composable(RenCarDestination.Login) {
                     PlaceholderScreen(title = "Giriş")
