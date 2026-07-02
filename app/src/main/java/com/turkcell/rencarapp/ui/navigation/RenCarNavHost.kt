@@ -20,6 +20,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
+import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
 
 /**
@@ -111,7 +112,16 @@ fun RenCarNavHost(
                     PlaceholderScreen(title = "Cüzdan / Ödeme Yöntemleri")
                 }
                 composable(RenCarDestination.Profile) {
-                    PlaceholderScreen(title = "Profil")
+                    ProfileRoute(
+                        onNavigateToSplash = {
+                            navController.navigate(RenCarDestination.Splash) {
+                                popUpTo(RenCarDestination.MainGraph) { inclusive = true }
+                            }
+                        },
+                        onShowSnackbar = { _ ->
+                            // TODO: Scaffold SnackbarHostState ile bağlanacak
+                        },
+                    )
                 }
 
                 navigation(
