@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.turkcell.rencarapp.ui.auth.login.LoginRoute
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
@@ -85,7 +86,19 @@ fun RenCarNavHost(
                     )
                 }
                 composable(RenCarDestination.Login) {
-                    PlaceholderScreen(title = "Giriş")
+                    LoginRoute(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToOtp = {
+                            navController.navigate(RenCarDestination.Otp) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToRegister = {
+                            navController.navigate(RenCarDestination.Register) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
                 composable(RenCarDestination.Register) {
                     PlaceholderScreen(title = "Kayıt")
