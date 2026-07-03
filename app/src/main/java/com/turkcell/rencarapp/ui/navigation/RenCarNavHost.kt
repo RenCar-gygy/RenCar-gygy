@@ -19,6 +19,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+
+// --- Furkan ve Çağla'nın Ekran Importları ---
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
 import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
 import com.turkcell.rencarapp.ui.license.LicenseRoute
@@ -27,11 +29,14 @@ import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
 
+// --- Eklenen Yeni Çağla Ekranları Importları ---
+import com.turkcell.rencarapp.ui.payment.wallet.WalletRoute
+import com.turkcell.rencarapp.ui.rental.history.RentalHistoryRoute
+import com.turkcell.rencarapp.ui.rental.summary.RentalSummaryRoute
+
 /**
- * Sprint 0 navigasyon iskeleti — iç içe grafikler.
- *
- * Ekranlar henüz MVI ile implemente edilmedi; placeholder içerik gösterilir.
- * Sprint 1'de her placeholder, ilgili `<Screen>Route` composable'ı ile değiştirilecektir.
+ * Sprint 0-1 navigasyon iskeleti — iç içe grafikler.
+ * Ekip bölüşümüne göre tamamlanan ekranlar bağlanmıştır.
  */
 @Composable
 fun RenCarNavHost(
@@ -145,11 +150,17 @@ fun RenCarNavHost(
                         },
                     )
                 }
+
+                // --- ÇAĞLA'NIN EKRANLARI ---
                 composable(RenCarDestination.RentalHistory) {
-                    PlaceholderScreen(title = "Kiralama Geçmişi")
+                    RentalHistoryRoute(
+                        onShowSnackbar = { _ -> /* TODO */ }
+                    )
                 }
                 composable(RenCarDestination.Wallet) {
-                    PlaceholderScreen(title = "Cüzdan / Ödeme Yöntemleri")
+                    WalletRoute(
+                        onShowSnackbar = { _ -> /* TODO */ }
+                    )
                 }
                 composable(RenCarDestination.Profile) {
                     ProfileRoute(
@@ -158,9 +169,7 @@ fun RenCarNavHost(
                                 popUpTo(RenCarDestination.MainGraph) { inclusive = true }
                             }
                         },
-                        onShowSnackbar = { _ ->
-                            // TODO: Scaffold SnackbarHostState ile bağlanacak
-                        },
+                        onShowSnackbar = { _ -> /* TODO */ },
                     )
                 }
 
@@ -168,6 +177,7 @@ fun RenCarNavHost(
                     startDestination = RenCarDestination.VehicleDetail,
                     route = RenCarDestination.RentalGraph,
                 ) {
+                    // --- NAZLI'NIN EKRANLARI (Placeholder olarak korundu) ---
                     composable(
                         route = RenCarDestination.VehicleDetail,
                         arguments = listOf(
@@ -184,14 +194,25 @@ fun RenCarNavHost(
                     ) {
                         PlaceholderScreen(title = "Rezervasyon Onayı")
                     }
+
+                    // --- ÇAĞLA'NIN EKRANI ---
                     composable(
                         route = RenCarDestination.RentalSummary,
                         arguments = listOf(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
                         ),
                     ) {
-                        PlaceholderScreen(title = "Ödeme / Kiralama Özeti")
+                        RentalSummaryRoute(
+                            onNavigateToDeliveryPhotos = { vehicleId ->
+                                navController.navigate(RenCarDestination.deliveryPhotosRoute(vehicleId)) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            onShowSnackbar = { _ -> /* TODO */ }
+                        )
                     }
+
+                    // --- NAZLI'NIN EKRANLARI (Placeholder olarak korundu) ---
                     composable(
                         route = RenCarDestination.DeliveryPhotos,
                         arguments = listOf(
