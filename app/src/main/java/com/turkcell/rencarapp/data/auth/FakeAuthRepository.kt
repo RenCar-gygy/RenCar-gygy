@@ -10,15 +10,13 @@ class FakeAuthRepository @Inject constructor(
     private val sessionStore: SessionStore,
 ) : AuthRepository {
 
-    private val registeredUsers = mutableMapOf<String, User>()
-
     override suspend fun requestOtp(phone: String): Result<OtpChallenge> {
         delay(FAKE_DELAY_MS)
         val normalizedPhone = normalizePhone(phone)
         if (normalizedPhone.isBlank()) {
             return Result.failure(IllegalArgumentException("Geçerli bir telefon numarası girin."))
         }
-        if (!registeredUsers.containsKey(normalizedPhone)) {
+        if (sessionStore.getRegisteredUser(normalizedPhone) == null) {
             return Result.failure(IllegalStateException("Bu telefon numarasına kayıtlı kullanıcı yok."))
         }
         return Result.success(
@@ -35,7 +33,7 @@ class FakeAuthRepository @Inject constructor(
         if (code != FAKE_OTP_CODE) {
             return Result.failure(IllegalArgumentException("Doğrulama kodu geçersiz."))
         }
-        val user = registeredUsers[normalizedPhone]
+        val user = sessionStore.getRegisteredUser(normalizedPhone)
             ?: return Result.failure(IllegalStateException("Bu telefon numarasına kayıtlı kullanıcı yok."))
         val tokens = fakeTokens(user)
         sessionStore.saveSession(tokens)
@@ -56,7 +54,7 @@ class FakeAuthRepository @Inject constructor(
         if (normalizedPhone.isBlank()) {
             return Result.failure(IllegalArgumentException("Geçerli bir telefon numarası girin."))
         }
-        if (registeredUsers.containsKey(normalizedPhone)) {
+        if (sessionStore.getRegisteredUser(normalizedPhone) != null) {
             return Result.failure(IllegalStateException("Bu telefon numarası zaten kayıtlı."))
         }
         val user = User(
@@ -66,7 +64,6 @@ class FakeAuthRepository @Inject constructor(
             phone = normalizedPhone,
             role = UserRole.PENDING,
         )
-        registeredUsers[normalizedPhone] = user
         val tokens = fakeTokens(user)
         sessionStore.saveSession(tokens)
         return Result.success(tokens)

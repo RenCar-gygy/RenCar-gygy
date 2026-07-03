@@ -153,6 +153,11 @@ fun RenCarNavHost(
                                 launchSingleTop = true
                             }
                         },
+                        onNavigateToMain = {
+                            navController.navigate(RenCarDestination.Map) {
+                                popUpTo(RenCarDestination.AuthGraph) { inclusive = true }
+                            }
+                        },
                     )
                 }
                 composable(RenCarDestination.License) {

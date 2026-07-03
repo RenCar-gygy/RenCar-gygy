@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.auth.otp
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -129,10 +131,12 @@ fun OtpRoute(
     onNavigateBack: () -> Unit,
     onNavigateToLogin: () -> Unit,
     onNavigateToLicense: () -> Unit,
+    onNavigateToMain: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OtpViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
@@ -140,6 +144,10 @@ fun OtpRoute(
                 OtpEffect.NavigateBack -> onNavigateBack()
                 OtpEffect.NavigateToLogin -> onNavigateToLogin()
                 OtpEffect.NavigateToLicense -> onNavigateToLicense()
+                OtpEffect.NavigateToMain -> onNavigateToMain()
+                is OtpEffect.ShowError -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
