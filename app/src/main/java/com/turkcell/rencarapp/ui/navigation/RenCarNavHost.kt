@@ -23,6 +23,7 @@ import androidx.navigation.navArgument
 // --- Furkan ve Çağla'nın Ekran Importları ---
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
 import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
+import com.turkcell.rencarapp.ui.auth.register.RegisterRoute
 import com.turkcell.rencarapp.ui.license.LicenseRoute
 import com.turkcell.rencarapp.ui.map.MapRoute
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
@@ -109,7 +110,20 @@ fun RenCarNavHost(
                     )
                 }
                 composable(RenCarDestination.Register) {
-                    PlaceholderScreen(title = "Kayıt")
+                    RegisterRoute(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToOtp = { phone ->
+                            navController.navigate(RenCarDestination.otpRoute(phone)) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate(RenCarDestination.Login) {
+                                popUpTo(RenCarDestination.Register) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
                 composable(
                     route = RenCarDestination.Otp,
