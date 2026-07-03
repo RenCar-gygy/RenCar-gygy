@@ -1,12 +1,22 @@
 package com.turkcell.rencarapp.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ExitToApp
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,66 +53,200 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (state.isLoading) {
-            CircularProgressIndicator()
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
-            // Kullanıcı Bilgileri Başlığı
-            Text(text = state.fullName, style = MaterialTheme.typography.titleLarge)
-            Text(text = state.phone, style = MaterialTheme.typography.bodyMedium)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Ehliyet Durumu Kartı
-            Card(
+            // Kullanıcı Bilgileri Başlığı ve Düzenle Butonu
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (state.isLicenseVerified) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.errorContainer
-                )
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                PaddingValues(16.dp)
-                Text(
-                    text = if (state.isLicenseVerified) "Ehliyet doğrulandı" else "Ehliyet onayı bekleniyor",
-                    modifier = Modifier.padding(16.dp)
-                )
+                Spacer(modifier = Modifier.weight(1f)) // Ortalamak için boşluk
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(3f)
+                ) {
+                    Text(
+                        text = state.fullName.ifBlank { "Kullanıcı" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = state.phone.ifBlank { "Telefon bilgisi yok" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    IconButton(
+                        onClick = { /* TODO: Profil düzenleme */ },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = "Düzenle",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Menü Öğeleri
-            ProfileMenuItem(title = "Ödeme yöntemleri") { onIntent(ProfileIntent.MenuItemClicked("Ödeme")) }
-            ProfileMenuItem(title = "Ayarlar") { onIntent(ProfileIntent.MenuItemClicked("Ayarlar")) }
-            ProfileMenuItem(title = "Yardım & destek") { onIntent(ProfileIntent.MenuItemClicked("Yardım")) }
-            ProfileMenuItem(title = "Davet et - 50₺ kazan") { onIntent(ProfileIntent.MenuItemClicked("Davet")) }
+            // Ehliyet Durumu Kartı
+            val isVerified = state.isLicenseVerified
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isVerified) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.VerifiedUser,
+                        contentDescription = null,
+                        tint = if (isVerified) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isVerified) "Ehliyet doğrulandı" else "Ehliyet onayı bekleniyor",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isVerified) Color(0xFF1B5E20) else MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        if (isVerified) {
+                            Text(
+                                text = "B Sınıfı - geçerli",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF2E7D32)
+                            )
+                        }
+                    }
+                    if (isVerified) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFC8E6C9)
+                        ) {
+                            Text(
+                                text = "Onaylı",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF1B5E20),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            // Menü Öğeleri
+            ProfileMenuItem(
+                title = "Ödeme yöntemleri",
+                icon = Icons.Rounded.Payment,
+                onClick = { onIntent(ProfileIntent.MenuItemClicked("Ödeme yöntemleri")) }
+            )
+            ProfileMenuItem(
+                title = "Ayarlar",
+                icon = Icons.Rounded.Settings,
+                onClick = { onIntent(ProfileIntent.MenuItemClicked("Ayarlar")) }
+            )
+            ProfileMenuItem(
+                title = "Yardım & destek",
+                icon = Icons.Rounded.HelpOutline,
+                onClick = { onIntent(ProfileIntent.MenuItemClicked("Yardım & destek")) }
+            )
+            ProfileMenuItem(
+                title = "Davet et - 50₺ kazan",
+                icon = Icons.Rounded.Share,
+                onClick = { onIntent(ProfileIntent.MenuItemClicked("Davet et")) }
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
 
             // Çıkış Yap Butonu
             OutlinedButton(
                 onClick = { onIntent(ProfileIntent.LogoutClicked) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = ButtonDefaults.outlinedButtonBorder.copy(
+                    brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error)
+                )
             ) {
-                Text(text = "Çıkış yap")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Çıkış yap", style = MaterialTheme.typography.titleMedium)
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-fun ProfileMenuItem(title: String, onClick: () -> Unit) {
+fun ProfileMenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = title, color = MaterialTheme.colorScheme.onSurface)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
