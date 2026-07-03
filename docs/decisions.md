@@ -175,3 +175,13 @@
 - License: stub fotoğraflarla `upload`; fake repo anında `APPROVED` döner; Devam Et kullanıcıyı `CUSTOMER` yapar
 - Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi `pricePerDay` üzerinden türetilir
 - Sprint 3'te gerçek fotoğraf seçimi ve MapLibre koordinat eşlemesi eklenecektir
+
+---
+
+### Onboarding 2–3. Sayfa Tasarımı
+
+- Karar: Splash (sayfa 1) ile görsel dil uyumlu, uygulama akışını anlatan 2 onboarding sayfası eklendi.
+- Son Güncelleme Tarihi: 03.07.2026
+- Sayfa 2: Harita keşfi — mini harita illüstrasyonu, fiyat pinleri, arama çubuğu
+- Sayfa 3: Hızlı kiralama — 3 adımlı kart (Kayıt ol → Doğrula → Yola çık)
+- Metinler API/stub davranışı uydurmaz; yalnızca kullanıcı yönlendirmesi amaçlıdır
