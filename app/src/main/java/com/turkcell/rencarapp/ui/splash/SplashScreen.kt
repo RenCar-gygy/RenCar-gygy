@@ -89,6 +89,8 @@ private fun splashColors(darkTheme: Boolean): SplashColors =
 fun SplashRoute(
     onNavigateToOnboarding: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToLicense: () -> Unit,
+    onNavigateToMain: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SplashViewModel = hiltViewModel(),
 ) {
@@ -99,6 +101,8 @@ fun SplashRoute(
             when (effect) {
                 SplashEffect.NavigateToOnboarding -> onNavigateToOnboarding()
                 SplashEffect.NavigateToLogin -> onNavigateToLogin()
+                SplashEffect.NavigateToLicense -> onNavigateToLicense()
+                SplashEffect.NavigateToMain -> onNavigateToMain()
             }
         }
     }
@@ -155,41 +159,45 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            SplashPageIndicator(
-                pageCount = state.pageCount,
-                currentPage = state.currentPage,
-                colors = colors,
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Button(
-                onClick = { onIntent(SplashIntent.StartClicked) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .shadow(12.dp, RoundedCornerShape(16.dp), spotColor = colors.buttonShadow),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = RenCarBlue,
-                    contentColor = Color.White,
-                ),
-            ) {
-                Text(
-                    text = "Hemen Başla",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
+            if (!state.isCheckingSession) {
+                SplashPageIndicator(
+                    pageCount = state.pageCount,
+                    currentPage = state.currentPage,
+                    colors = colors,
                 )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Button(
+                    onClick = { onIntent(SplashIntent.StartClicked) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .shadow(12.dp, RoundedCornerShape(16.dp), spotColor = colors.buttonShadow),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RenCarBlue,
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Text(
+                        text = "Hemen Başla",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LoginFooterText(
+                    colors = colors,
+                    onLoginClick = { onIntent(SplashIntent.LoginClicked) },
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+            } else {
+                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LoginFooterText(
-                colors = colors,
-                onLoginClick = { onIntent(SplashIntent.LoginClicked) },
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
