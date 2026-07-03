@@ -17,12 +17,13 @@ data class MapVehiclePin(
 )
 
 data class MapUiState(
-    val nearbyCount: Int = 12,
+    val nearbyCount: Int = 0,
     val areaLabel: String = "Kadıköy çevresinde · 3 dk uzaklıkta",
     val searchQuery: String = "",
     val selectedCategory: VehicleCategory = VehicleCategory.ALL,
     val vehiclePins: List<MapVehiclePin> = emptyList(),
     val visiblePins: List<MapVehiclePin> = emptyList(),
+    val isLoading: Boolean = true,
 )
 
 sealed interface MapIntent {
@@ -36,4 +37,5 @@ sealed interface MapIntent {
 
 sealed interface MapEffect {
     data class NavigateToVehicleDetail(val vehicleId: String) : MapEffect
+    data class ShowError(val message: String) : MapEffect
 }
