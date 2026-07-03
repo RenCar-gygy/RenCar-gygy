@@ -1,5 +1,7 @@
 package com.turkcell.rencarapp.ui.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +40,8 @@ import com.turkcell.rencarapp.ui.rental.summary.RentalSummaryRoute
  * Sprint 0-1 navigasyon iskeleti — iç içe grafikler.
  * Ekip bölüşümüne göre tamamlanan ekranlar bağlanmıştır.
  */
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RenCarNavHost(
     modifier: Modifier = Modifier,
@@ -152,9 +156,12 @@ fun RenCarNavHost(
                 }
 
                 // --- ÇAĞLA'NIN EKRANLARI ---
+
                 composable(RenCarDestination.RentalHistory) {
+                    // Eğer burada hata alıyorsan, RentalHistoryRoute fonksiyonun
+                    // parametrelerini kontrol et. Eğer parametre almıyorsa parantezi boş bırak.
                     RentalHistoryRoute(
-                        onShowSnackbar = { _ -> /* TODO */ }
+                        onShowSnackbar = {}
                     )
                 }
                 composable(RenCarDestination.Wallet) {
