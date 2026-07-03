@@ -139,3 +139,16 @@
 - Telefon normalizasyonu: UI'daki 10 haneli `5xxxxxxxxx` → API formatı `+905xxxxxxxxx`
 - Register UI geçici uyumu: Telefon-only kayıt ekranı Sprint 2'de fake register için sentetik alanlar kullanır (`{phone}@rencar.local`, parola `123456`, ad `Kullanıcı`); tam form tasarım gelene kadar geçerlidir.
 - Eski `login(email, password)` imzası kaldırıldı; ViewModel entegrasyonu Batch 3'te yapılacaktır.
+
+---
+
+### Sprint 2 — Splash Otomatik Yönlendirme (Batch 2)
+
+- Karar: Splash açılışında `AuthRepository.getCurrentUser()` ve `SessionStore.isOnboardingCompleted()` ile otomatik yönlendirme yapılır.
+- Son Güncelleme Tarihi: 03.07.2026
+- Yönlendirme kuralları:
+  - Oturum + `CUSTOMER` → Main (Harita)
+  - Oturum + `PENDING` → License
+  - Oturum yok + onboarding tamamlandı → Login
+  - Oturum yok + onboarding görülmedi → Splash UI (Hemen Başla / Giriş yap)
+- `Giriş yap` tıklanınca onboarding tamamlandı bayrağı set edilir; onboarding bitişi Batch 3'te `OnboardingViewModel`'e eklenecektir.

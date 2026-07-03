@@ -70,11 +70,25 @@ fun RenCarNavHost(
                 SplashRoute(
                     onNavigateToOnboarding = {
                         navController.navigate(RenCarDestination.Onboarding) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
                     onNavigateToLogin = {
                         navController.navigate(RenCarDestination.Login) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToLicense = {
+                        navController.navigate(RenCarDestination.License) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToMain = {
+                        navController.navigate(RenCarDestination.Map) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
