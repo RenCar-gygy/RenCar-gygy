@@ -24,7 +24,8 @@ import androidx.navigation.navArgument
 
 // --- Furkan ve Çağla'nın Ekran Importları ---
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
-import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
+import com.turkcell.rencarapp.ui.auth.otp.OtpRoutegit push
+import com.turkcell.rencarapp.ui.auth.register.RegisterRoute
 import com.turkcell.rencarapp.ui.license.LicenseRoute
 import com.turkcell.rencarapp.ui.map.MapRoute
 import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
@@ -33,6 +34,10 @@ import com.turkcell.rencarapp.ui.splash.SplashRoute
 
 // --- Eklenen Yeni Çağla Ekranları Importları ---
 import com.turkcell.rencarapp.ui.payment.wallet.WalletRoute
+import com.turkcell.rencarapp.ui.rental.active.ActiveRentalRoute
+import com.turkcell.rencarapp.ui.rental.confirmation.RentalConfirmationRoute
+import com.turkcell.rencarapp.ui.rental.delivery_photos.DeliveryPhotosRoute
+import com.turkcell.rencarapp.ui.vehicle.detail.VehicleDetailRoute
 import com.turkcell.rencarapp.ui.rental.history.RentalHistoryRoute
 import com.turkcell.rencarapp.ui.rental.summary.RentalSummaryRoute
 
@@ -73,11 +78,25 @@ fun RenCarNavHost(
                 SplashRoute(
                     onNavigateToOnboarding = {
                         navController.navigate(RenCarDestination.Onboarding) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
                     onNavigateToLogin = {
                         navController.navigate(RenCarDestination.Login) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToLicense = {
+                        navController.navigate(RenCarDestination.License) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToMain = {
+                        navController.navigate(RenCarDestination.Map) {
+                            popUpTo(RenCarDestination.Splash) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
@@ -113,7 +132,20 @@ fun RenCarNavHost(
                     )
                 }
                 composable(RenCarDestination.Register) {
-                    PlaceholderScreen(title = "Kayıt")
+                    RegisterRoute(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToOtp = { phone ->
+                            navController.navigate(RenCarDestination.otpRoute(phone)) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate(RenCarDestination.Login) {
+                                popUpTo(RenCarDestination.Register) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
                 composable(
                     route = RenCarDestination.Otp,
@@ -127,6 +159,11 @@ fun RenCarNavHost(
                         onNavigateToLicense = {
                             navController.navigate(RenCarDestination.License) {
                                 launchSingleTop = true
+                            }
+                        },
+                        onNavigateToMain = {
+                            navController.navigate(RenCarDestination.Map) {
+                                popUpTo(RenCarDestination.AuthGraph) { inclusive = true }
                             }
                         },
                     )
@@ -191,7 +228,12 @@ fun RenCarNavHost(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
                         ),
                     ) {
-                        PlaceholderScreen(title = "Araç Detay")
+                        VehicleDetailRoute(
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToConfirmation = { vehicleId ->
+                                navController.navigate(RenCarDestination.rentalConfirmationRoute(vehicleId))
+                            }
+                        )
                     }
                     composable(
                         route = RenCarDestination.RentalConfirmation,
@@ -199,7 +241,12 @@ fun RenCarNavHost(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
                         ),
                     ) {
-                        PlaceholderScreen(title = "Rezervasyon Onayı")
+                        RentalConfirmationRoute(
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToSummary = { vehicleId ->
+                                navController.navigate(RenCarDestination.rentalSummaryRoute(vehicleId))
+                            }
+                        )
                     }
 
                     // --- ÇAĞLA'NIN EKRANI ---
@@ -226,7 +273,12 @@ fun RenCarNavHost(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
                         ),
                     ) {
-                        PlaceholderScreen(title = "Teslim Fotoğrafı (4 Yön)")
+                        DeliveryPhotosRoute(
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToActiveRental = { rentalId ->
+                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
+                            }
+                        )
                     }
                     composable(
                         route = RenCarDestination.ActiveRental,
@@ -234,7 +286,13 @@ fun RenCarNavHost(
                             navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
                         ),
                     ) {
-                        PlaceholderScreen(title = "Aktif Kiralama")
+                        ActiveRentalRoute(
+                            onNavigateToMain = {
+                                navController.navigate(RenCarDestination.MainGraph) {
+                                    popUpTo(RenCarDestination.Map) { inclusive = true }
+                                }
+                            }
+                        )
                     }
                 }
             }

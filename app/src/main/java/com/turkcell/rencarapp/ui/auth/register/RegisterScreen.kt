@@ -1,5 +1,6 @@
-package com.turkcell.rencarapp.ui.auth.login
+package com.turkcell.rencarapp.ui.auth.register
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,14 +28,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -44,6 +44,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,7 +56,7 @@ import com.turkcell.rencarapp.ui.theme.RenCarAppTheme
 private val RenCarBlue = Color(0xFF2563EB)
 private val RenCarBlueGlow = Color(0x662563EB)
 
-private data class LoginColors(
+private data class RegisterColors(
     val background: Color,
     val title: Color,
     val subtitle: Color,
@@ -74,9 +75,9 @@ private data class LoginColors(
 )
 
 @Composable
-private fun loginColors(darkTheme: Boolean): LoginColors =
+private fun registerColors(darkTheme: Boolean): RegisterColors =
     if (darkTheme) {
-        LoginColors(
+        RegisterColors(
             background = Color(0xFF0B0F14),
             title = Color.White,
             subtitle = Color(0xFF94A3B8),
@@ -94,7 +95,7 @@ private fun loginColors(darkTheme: Boolean): LoginColors =
             buttonShadow = RenCarBlueGlow,
         )
     } else {
-        LoginColors(
+        RegisterColors(
             background = Color.White,
             title = Color(0xFF0F172A),
             subtitle = Color(0xFF64748B),
@@ -114,12 +115,12 @@ private fun loginColors(darkTheme: Boolean): LoginColors =
     }
 
 @Composable
-fun LoginRoute(
+fun RegisterRoute(
     onNavigateBack: () -> Unit,
     onNavigateToOtp: (String) -> Unit,
-    onNavigateToRegister: () -> Unit,
+    onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = hiltViewModel(),
+    viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -127,17 +128,17 @@ fun LoginRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                LoginEffect.NavigateBack -> onNavigateBack()
-                is LoginEffect.NavigateToOtp -> onNavigateToOtp(effect.phoneNumber)
-                LoginEffect.NavigateToRegister -> onNavigateToRegister()
-                is LoginEffect.ShowError -> {
+                RegisterEffect.NavigateBack -> onNavigateBack()
+                is RegisterEffect.NavigateToOtp -> onNavigateToOtp(effect.phoneNumber)
+                RegisterEffect.NavigateToLogin -> onNavigateToLogin()
+                is RegisterEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
-    LoginScreen(
+    RegisterScreen(
         state = uiState,
         onIntent = viewModel::onIntent,
         modifier = modifier,
@@ -145,12 +146,12 @@ fun LoginRoute(
 }
 
 @Composable
-fun LoginScreen(
-    state: LoginUiState,
-    onIntent: (LoginIntent) -> Unit,
+fun RegisterScreen(
+    state: RegisterUiState,
+    onIntent: (RegisterIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = loginColors(isSystemInDarkTheme())
+    val colors = registerColors(isSystemInDarkTheme())
     val formattedPhone = remember(state.phoneNumber) { formatPhoneNumber(state.phoneNumber) }
 
     Box(
@@ -166,15 +167,15 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            LoginBackButton(
+            RegisterBackButton(
                 colors = colors,
-                onClick = { onIntent(LoginIntent.BackClicked) },
+                onClick = { onIntent(RegisterIntent.BackClicked) },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Tekrar hoş geldin",
+                text = "Hesabını oluştur",
                 color = colors.title,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
@@ -209,7 +210,7 @@ fun LoginScreen(
                     value = formattedPhone,
                     colors = colors,
                     modifier = Modifier.weight(1f),
-                    onValueChange = { onIntent(LoginIntent.PhoneChanged(it)) },
+                    onValueChange = { onIntent(RegisterIntent.PhoneChanged(it)) },
                 )
             }
 
@@ -236,7 +237,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { onIntent(LoginIntent.SendCodeClicked) },
+                onClick = { onIntent(RegisterIntent.SendCodeClicked) },
                 enabled = state.isSendCodeEnabled && !state.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -265,9 +266,9 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            RegisterFooterText(
+            LoginFooterText(
                 colors = colors,
-                onRegisterClick = { onIntent(LoginIntent.RegisterClicked) },
+                onLoginClick = { onIntent(RegisterIntent.LoginClicked) },
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -276,8 +277,8 @@ fun LoginScreen(
 }
 
 @Composable
-private fun LoginBackButton(
-    colors: LoginColors,
+private fun RegisterBackButton(
+    colors: RegisterColors,
     onClick: () -> Unit,
 ) {
     Box(
@@ -299,7 +300,7 @@ private fun LoginBackButton(
 }
 
 @Composable
-private fun CountryCodeField(colors: LoginColors) {
+private fun CountryCodeField(colors: RegisterColors) {
     Box(
         modifier = Modifier
             .height(56.dp)
@@ -321,7 +322,7 @@ private fun CountryCodeField(colors: LoginColors) {
 @Composable
 private fun PhoneNumberField(
     value: String,
-    colors: LoginColors,
+    colors: RegisterColors,
     modifier: Modifier = Modifier,
     onValueChange: (String) -> Unit,
 ) {
@@ -361,14 +362,14 @@ private fun PhoneNumberField(
 }
 
 @Composable
-private fun RegisterFooterText(
-    colors: LoginColors,
-    onRegisterClick: () -> Unit,
+private fun LoginFooterText(
+    colors: RegisterColors,
+    onLoginClick: () -> Unit,
 ) {
     val annotated = remember(colors) {
         buildAnnotatedString {
             withStyle(SpanStyle(color = colors.footerText)) {
-                append("Hesabın yok mu? ")
+                append("Zaten hesabın var? ")
             }
             withStyle(
                 SpanStyle(
@@ -376,7 +377,7 @@ private fun RegisterFooterText(
                     fontWeight = FontWeight.SemiBold,
                 ),
             ) {
-                append("Kayıt ol")
+                append("Giriş yap")
             }
         }
     }
@@ -386,8 +387,8 @@ private fun RegisterFooterText(
         fontSize = 14.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onRegisterClick),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            .clickable(onClick = onLoginClick),
+        textAlign = TextAlign.Center,
     )
 }
 
@@ -399,12 +400,12 @@ private fun formatPhoneNumber(digits: String): String =
         }
     }
 
-@Preview(showBackground = true, name = "Login Light")
+@Preview(showBackground = true, name = "Register Light")
 @Composable
-private fun LoginScreenLightPreview() {
+private fun RegisterScreenLightPreview() {
     RenCarAppTheme(darkTheme = false, dynamicColor = false) {
-        LoginScreen(
-            state = LoginUiState(
+        RegisterScreen(
+            state = RegisterUiState(
                 phoneNumber = "5320000000",
                 isSendCodeEnabled = true,
             ),
@@ -413,10 +414,10 @@ private fun LoginScreenLightPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "Login Dark")
+@Preview(showBackground = true, name = "Register Dark")
 @Composable
-private fun LoginScreenDarkPreview() {
+private fun RegisterScreenDarkPreview() {
     RenCarAppTheme(darkTheme = true, dynamicColor = false) {
-        LoginScreen(state = LoginUiState(), onIntent = {})
+        RegisterScreen(state = RegisterUiState(), onIntent = {})
     }
 }

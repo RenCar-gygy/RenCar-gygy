@@ -119,3 +119,59 @@
 
 - Karar: İlk tamamlanan **Login** ekranı (`ui/auth/login/`) referans implementasyon olacaktır.
 - Son Güncelleme Tarihi: 02.07.2026
+
+---
+
+### Sprint 2 — Oturum ve Auth Repository (Batch 1)
+
+- Karar: **`SessionStore`** (DataStore Preferences) ile JWT ve onboarding tamamlandı bayrağı kalıcı saklanır.
+- Son Güncelleme Tarihi: 03.07.2026
+- Uygulama: `data/session/SessionStore.kt`, `di/SessionModule.kt`
+- Bağımlılık: `androidx.datastore:datastore-preferences` **1.1.7**
+
+---
+
+### Auth Repository — Telefon + OTP Sözleşmesi
+
+- Karar: `AuthRepository` OpenAPI ile hizalanır: `requestOtp`, `verifyOtp`, `register`, `logout`, `getCurrentUser`.
+- Son Güncelleme Tarihi: 03.07.2026
+- Fake OTP kodu: **`123456`** (backend simülasyonu ile uyumlu)
+- Telefon normalizasyonu: UI'daki 10 haneli `5xxxxxxxxx` → API formatı `+905xxxxxxxxx`
+- Register UI geçici uyumu: Telefon-only kayıt ekranı Sprint 2'de fake register için sentetik alanlar kullanır (`{phone}@rencar.local`, parola `123456`, ad `Kullanıcı`); tam form tasarım gelene kadar geçerlidir.
+- Eski `login(email, password)` imzası kaldırıldı; ViewModel entegrasyonu Batch 3'te yapılacaktır.
+
+---
+
+### Sprint 2 — Splash Otomatik Yönlendirme (Batch 2)
+
+- Karar: Splash açılışında `AuthRepository.getCurrentUser()` ve `SessionStore.isOnboardingCompleted()` ile otomatik yönlendirme yapılır.
+- Son Güncelleme Tarihi: 03.07.2026
+- Yönlendirme kuralları:
+  - Oturum + `CUSTOMER` → Main (Harita)
+  - Oturum + `PENDING` → License
+  - Oturum yok + onboarding tamamlandı → Login
+  - Oturum yok + onboarding görülmedi → Splash UI (Hemen Başla / Giriş yap)
+- `Giriş yap` tıklanınca onboarding tamamlandı bayrağı set edilir; onboarding bitişi Batch 3'te `OnboardingViewModel`'e eklenecektir.
+
+---
+
+### Sprint 2 — Auth ViewModel Entegrasyonu (Batch 3)
+
+- Karar: Login, Register ve OTP ViewModel'leri `AuthRepository` ile bağlanır; rol bazlı yönlendirme OTP doğrulaması sonrası yapılır.
+- Son Güncelleme Tarihi: 03.07.2026
+- Login: `requestOtp` → OTP ekranı
+- Register: sentetik alanlarla `register` → OTP ekranı
+- OTP: `verifyOtp` → `PENDING` ise License, `CUSTOMER` ise Main
+- Fake OTP kodu: **123456**
+- Onboarding tamamlandı bayrağı `OnboardingViewModel.FinishClicked` ile set edilir
+- Fake kayıtlı kullanıcılar `SessionStore` içinde kalıcı tutulur; logout oturumu temizler, telefon kaydını silmez
+
+---
+
+### Sprint 2 — License ve Harita Entegrasyonu (Batch 4)
+
+- Karar: `LicenseViewModel` ve `MapViewModel` fake repository'ler ile bağlanır.
+- Son Güncelleme Tarihi: 03.07.2026
+- License: stub fotoğraflarla `upload`; fake repo anında `APPROVED` döner; Devam Et kullanıcıyı `CUSTOMER` yapar
+- Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi `pricePerDay` üzerinden türetilir
+- Sprint 3'te gerçek fotoğraf seçimi ve MapLibre koordinat eşlemesi eklenecektir

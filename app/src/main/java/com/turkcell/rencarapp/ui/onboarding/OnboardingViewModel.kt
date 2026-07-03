@@ -2,6 +2,7 @@ package com.turkcell.rencarapp.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.session.SessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class OnboardingViewModel @Inject constructor() : ViewModel() {
+class OnboardingViewModel @Inject constructor(
+    private val sessionStore: SessionStore,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
@@ -33,7 +36,14 @@ class OnboardingViewModel @Inject constructor() : ViewModel() {
                     _uiState.update { it.copy(currentPage = nextPage) }
                 }
             }
-            OnboardingIntent.FinishClicked -> sendEffect(OnboardingEffect.NavigateToRegister)
+            OnboardingIntent.FinishClicked -> finishOnboarding()
+        }
+    }
+
+    private fun finishOnboarding() {
+        viewModelScope.launch {
+            sessionStore.setOnboardingCompleted(true)
+            sendEffect(OnboardingEffect.NavigateToRegister)
         }
     }
 

@@ -1,4 +1,4 @@
-package com.turkcell.rencarapp.ui.auth.login
+package com.turkcell.rencarapp.ui.auth.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,22 +15,22 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(
+class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LoginUiState())
-    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(RegisterUiState())
+    val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    private val _effect = Channel<LoginEffect>(Channel.BUFFERED)
-    val effect: Flow<LoginEffect> = _effect.receiveAsFlow()
+    private val _effect = Channel<RegisterEffect>(Channel.BUFFERED)
+    val effect: Flow<RegisterEffect> = _effect.receiveAsFlow()
 
-    fun onIntent(intent: LoginIntent) {
+    fun onIntent(intent: RegisterIntent) {
         when (intent) {
-            is LoginIntent.PhoneChanged -> updatePhone(intent.value)
-            LoginIntent.BackClicked -> sendEffect(LoginEffect.NavigateBack)
-            LoginIntent.SendCodeClicked -> sendCode()
-            LoginIntent.RegisterClicked -> sendEffect(LoginEffect.NavigateToRegister)
+            is RegisterIntent.PhoneChanged -> updatePhone(intent.value)
+            RegisterIntent.BackClicked -> sendEffect(RegisterEffect.NavigateBack)
+            RegisterIntent.SendCodeClicked -> sendCode()
+            RegisterIntent.LoginClicked -> sendEffect(RegisterEffect.NavigateToLogin)
         }
     }
 
@@ -50,20 +50,31 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = authRepository.requestOtp(state.phoneNumber)
+            val phone = state.phoneNumber
+            val result = authRepository.register(
+                email = "$phone@rencar.local",
+                password = REGISTER_STUB_PASSWORD,
+                fullName = REGISTER_STUB_FULL_NAME,
+                phone = phone,
+            )
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess { sendEffect(LoginEffect.NavigateToOtp(phoneNumber = state.phoneNumber)) }
+                .onSuccess { sendEffect(RegisterEffect.NavigateToOtp(phoneNumber = phone)) }
                 .onFailure { error ->
-                    sendEffect(LoginEffect.ShowError(error.message ?: "Kod gönderilemedi."))
+                    sendEffect(RegisterEffect.ShowError(error.message ?: "Kayıt tamamlanamadı."))
                 }
         }
     }
 
-    private fun sendEffect(effect: LoginEffect) {
+    private fun sendEffect(effect: RegisterEffect) {
         viewModelScope.launch {
             _effect.send(effect)
         }
+    }
+
+    private companion object {
+        const val REGISTER_STUB_PASSWORD = "123456"
+        const val REGISTER_STUB_FULL_NAME = "Kullanıcı"
     }
 }

@@ -27,4 +27,6 @@ sealed interface OtpEffect {
     data object NavigateBack : OtpEffect
     data object NavigateToLogin : OtpEffect
     data object NavigateToLicense : OtpEffect
+    data object NavigateToMain : OtpEffect
+    data class ShowError(val message: String) : OtpEffect
 }

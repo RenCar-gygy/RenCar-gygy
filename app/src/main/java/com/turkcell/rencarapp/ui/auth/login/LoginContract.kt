@@ -17,4 +17,5 @@ sealed interface LoginEffect {
     data object NavigateBack : LoginEffect
     data class NavigateToOtp(val phoneNumber: String) : LoginEffect
     data object NavigateToRegister : LoginEffect
+    data class ShowError(val message: String) : LoginEffect
 }

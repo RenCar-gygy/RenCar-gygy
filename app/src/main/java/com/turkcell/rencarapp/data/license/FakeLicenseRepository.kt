@@ -20,7 +20,7 @@ class FakeLicenseRepository @Inject constructor() : LicenseRepository {
         if (frontImageBytes.isEmpty() || backImageBytes.isEmpty()) {
             return Result.failure(IllegalArgumentException("Ön ve arka ehliyet fotoğrafı zorunludur."))
         }
-        status = LicenseStatus.UNDER_REVIEW
+        status = LicenseStatus.APPROVED
         rejectReason = null
         return Result.success(LicenseInfo(status = status))
     }
