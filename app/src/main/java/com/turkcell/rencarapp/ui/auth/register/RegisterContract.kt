@@ -17,4 +17,5 @@ sealed interface RegisterEffect {
     data object NavigateBack : RegisterEffect
     data class NavigateToOtp(val phoneNumber: String) : RegisterEffect
     data object NavigateToLogin : RegisterEffect
+    data class ShowError(val message: String) : RegisterEffect
 }

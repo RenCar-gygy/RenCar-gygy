@@ -152,3 +152,16 @@
   - Oturum yok + onboarding tamamlandı → Login
   - Oturum yok + onboarding görülmedi → Splash UI (Hemen Başla / Giriş yap)
 - `Giriş yap` tıklanınca onboarding tamamlandı bayrağı set edilir; onboarding bitişi Batch 3'te `OnboardingViewModel`'e eklenecektir.
+
+---
+
+### Sprint 2 — Auth ViewModel Entegrasyonu (Batch 3)
+
+- Karar: Login, Register ve OTP ViewModel'leri `AuthRepository` ile bağlanır; rol bazlı yönlendirme OTP doğrulaması sonrası yapılır.
+- Son Güncelleme Tarihi: 03.07.2026
+- Login: `requestOtp` → OTP ekranı
+- Register: sentetik alanlarla `register` → OTP ekranı
+- OTP: `verifyOtp` → `PENDING` ise License, `CUSTOMER` ise Main
+- Fake OTP kodu: **123456**
+- Onboarding tamamlandı bayrağı `OnboardingViewModel.FinishClicked` ile set edilir
+- Fake kayıtlı kullanıcılar `SessionStore` içinde kalıcı tutulur; logout oturumu temizler, telefon kaydını silmez

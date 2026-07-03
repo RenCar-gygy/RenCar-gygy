@@ -3,9 +3,11 @@ package com.turkcell.rencarapp.data.session
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.turkcell.rencarapp.data.auth.AuthTokens
 import com.turkcell.rencarapp.data.auth.User
@@ -20,6 +22,7 @@ interface SessionStore {
     suspend fun saveSession(tokens: AuthTokens)
     suspend fun clearSession()
     suspend fun getSession(): AuthTokens?
+    suspend fun getRegisteredUser(phone: String): User?
     suspend fun isOnboardingCompleted(): Boolean
     suspend fun setOnboardingCompleted(completed: Boolean)
 }
@@ -40,6 +43,7 @@ class DataStoreSessionStore @Inject constructor(
             prefs[Keys.USER_FULL_NAME] = tokens.user.fullName
             prefs[Keys.USER_PHONE] = tokens.user.phone.orEmpty()
             prefs[Keys.USER_ROLE] = tokens.user.role.name
+            upsertRegisteredUser(prefs, tokens.user)
         }
     }
 
@@ -77,6 +81,11 @@ class DataStoreSessionStore @Inject constructor(
         )
     }
 
+    override suspend fun getRegisteredUser(phone: String): User? {
+        val prefs = dataStore.data.first()
+        return readRegisteredUsers(prefs[Keys.REGISTERED_USERS]).find { it.phone == phone }
+    }
+
     override suspend fun isOnboardingCompleted(): Boolean =
         dataStore.data.map { it[Keys.ONBOARDING_COMPLETED] ?: false }.first()
 
@@ -84,6 +93,15 @@ class DataStoreSessionStore @Inject constructor(
         dataStore.edit { prefs ->
             prefs[Keys.ONBOARDING_COMPLETED] = completed
         }
+    }
+
+    private fun upsertRegisteredUser(prefs: MutablePreferences, user: User) {
+        val phone = user.phone ?: return
+        val registered = readRegisteredUsers(prefs[Keys.REGISTERED_USERS])
+            .filterNot { it.phone == phone }
+            .toMutableList()
+        registered.add(user)
+        prefs[Keys.REGISTERED_USERS] = registered.map(::encodeRegisteredUser).toSet()
     }
 
     private object Keys {
@@ -95,11 +113,37 @@ class DataStoreSessionStore @Inject constructor(
         val USER_PHONE = stringPreferencesKey("user_phone")
         val USER_ROLE = stringPreferencesKey("user_role")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val REGISTERED_USERS = stringSetPreferencesKey("registered_users")
     }
 
     private companion object {
         val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(
             name = "rencar_session",
         )
+
+        private fun encodeRegisteredUser(user: User): String =
+            listOf(
+                user.phone.orEmpty(),
+                user.id,
+                user.email,
+                user.fullName,
+                user.role.name,
+            ).joinToString("|")
+
+        private fun decodeRegisteredUser(raw: String): User? {
+            val parts = raw.split("|")
+            if (parts.size != 5) return null
+            val phone = parts[0].takeIf { it.isNotEmpty() } ?: return null
+            return User(
+                phone = phone,
+                id = parts[1],
+                email = parts[2],
+                fullName = parts[3],
+                role = UserRole.valueOf(parts[4]),
+            )
+        }
+
+        private fun readRegisteredUsers(raw: Set<String>?): List<User> =
+            raw.orEmpty().mapNotNull(::decodeRegisteredUser)
     }
 }
