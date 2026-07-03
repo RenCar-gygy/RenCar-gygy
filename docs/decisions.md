@@ -165,3 +165,13 @@
 - Fake OTP kodu: **123456**
 - Onboarding tamamlandı bayrağı `OnboardingViewModel.FinishClicked` ile set edilir
 - Fake kayıtlı kullanıcılar `SessionStore` içinde kalıcı tutulur; logout oturumu temizler, telefon kaydını silmez
+
+---
+
+### Sprint 2 — License ve Harita Entegrasyonu (Batch 4)
+
+- Karar: `LicenseViewModel` ve `MapViewModel` fake repository'ler ile bağlanır.
+- Son Güncelleme Tarihi: 03.07.2026
+- License: stub fotoğraflarla `upload`; fake repo anında `APPROVED` döner; Devam Et kullanıcıyı `CUSTOMER` yapar
+- Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi `pricePerDay` üzerinden türetilir
+- Sprint 3'te gerçek fotoğraf seçimi ve MapLibre koordinat eşlemesi eklenecektir

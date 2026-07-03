@@ -5,6 +5,8 @@ data class LicenseUiState(
     val isFrontUploaded: Boolean = true,
     val isBackUploaded: Boolean = false,
     val isContinueEnabled: Boolean = false,
+    val isLoading: Boolean = false,
+    val rejectReason: String? = null,
 )
 
 sealed interface LicenseIntent {
@@ -16,4 +18,5 @@ sealed interface LicenseIntent {
 sealed interface LicenseEffect {
     data object NavigateBack : LicenseEffect
     data object NavigateToMain : LicenseEffect
+    data class ShowError(val message: String) : LicenseEffect
 }
