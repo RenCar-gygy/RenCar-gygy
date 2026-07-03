@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp.logging.interceptor)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)

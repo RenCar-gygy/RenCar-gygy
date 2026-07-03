@@ -119,3 +119,23 @@
 
 - Karar: İlk tamamlanan **Login** ekranı (`ui/auth/login/`) referans implementasyon olacaktır.
 - Son Güncelleme Tarihi: 02.07.2026
+
+---
+
+### Sprint 2 — Oturum ve Auth Repository (Batch 1)
+
+- Karar: **`SessionStore`** (DataStore Preferences) ile JWT ve onboarding tamamlandı bayrağı kalıcı saklanır.
+- Son Güncelleme Tarihi: 03.07.2026
+- Uygulama: `data/session/SessionStore.kt`, `di/SessionModule.kt`
+- Bağımlılık: `androidx.datastore:datastore-preferences` **1.1.7**
+
+---
+
+### Auth Repository — Telefon + OTP Sözleşmesi
+
+- Karar: `AuthRepository` OpenAPI ile hizalanır: `requestOtp`, `verifyOtp`, `register`, `logout`, `getCurrentUser`.
+- Son Güncelleme Tarihi: 03.07.2026
+- Fake OTP kodu: **`123456`** (backend simülasyonu ile uyumlu)
+- Telefon normalizasyonu: UI'daki 10 haneli `5xxxxxxxxx` → API formatı `+905xxxxxxxxx`
+- Register UI geçici uyumu: Telefon-only kayıt ekranı Sprint 2'de fake register için sentetik alanlar kullanır (`{phone}@rencar.local`, parola `123456`, ad `Kullanıcı`); tam form tasarım gelene kadar geçerlidir.
+- Eski `login(email, password)` imzası kaldırıldı; ViewModel entegrasyonu Batch 3'te yapılacaktır.
