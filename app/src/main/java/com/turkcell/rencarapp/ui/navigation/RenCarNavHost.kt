@@ -24,7 +24,7 @@ import androidx.navigation.navArgument
 
 // --- Furkan ve Çağla'nın Ekran Importları ---
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
-import com.turkcell.rencarapp.ui.auth.otp.OtpRoutegit
+import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
 import com.turkcell.rencarapp.ui.auth.register.RegisterRoute
 import com.turkcell.rencarapp.ui.license.LicenseRoute
 import com.turkcell.rencarapp.ui.map.MapRoute
