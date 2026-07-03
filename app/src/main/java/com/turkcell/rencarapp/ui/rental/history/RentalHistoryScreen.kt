@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RentalHistoryRoute(
