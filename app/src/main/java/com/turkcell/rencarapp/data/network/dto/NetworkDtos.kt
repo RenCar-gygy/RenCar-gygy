@@ -12,8 +12,20 @@ data class RegisterDto(
 
 @Serializable
 data class LoginDto(
-    val email: String,
-    val password: String,
+    val phone: String,
+)
+
+@Serializable
+data class VerifyOtpDto(
+    val phone: String,
+    val code: String,
+)
+
+@Serializable
+data class OtpRequiredResponseDto(
+    val message: String,
+    val phone: String,
+    val expiresAt: String? = null,
 )
 
 @Serializable
