@@ -171,24 +171,11 @@ fun MapScreen(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        MapStubBackground(colors = colors)
-
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val mapWidth = maxWidth
-            val mapHeight = maxHeight
-
-            state.visiblePins.forEach { pin ->
-                VehicleMapPin(
-                    pin = pin,
-                    colors = colors,
-                    modifier = Modifier.offset(
-                        x = mapWidth * pin.offsetXFraction,
-                        y = mapHeight * pin.offsetYFraction,
-                    ),
-                    onClick = { onIntent(MapIntent.VehiclePinClicked(pin.id)) },
-                )
-            }
-        }
+        MapLibreMapView(
+            pins = state.visiblePins,
+            onPinClick = { onIntent(MapIntent.VehiclePinClicked(it)) },
+            modifier = Modifier.fillMaxSize(),
+        )
 
         MapSearchBar(
             query = state.searchQuery,
@@ -564,7 +551,13 @@ private fun MapScreenLightPreview() {
         MapScreen(
             state = MapUiState(
                 visiblePins = listOf(
-                    MapVehiclePin("1", "₺28", VehicleCategory.ECONOMIC, 0.3f, 0.3f),
+                    MapVehiclePin(
+                        id = "1",
+                        priceLabel = "₺28",
+                        category = VehicleCategory.ECONOMIC,
+                        latitude = 41.0151,
+                        longitude = 28.9795,
+                    ),
                 ),
             ),
             onIntent = {},
