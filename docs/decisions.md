@@ -206,3 +206,12 @@
 - Stub yükleme: UI henüz gerçek fotoğraf seçmiyor; repository tek bayt stub'ı geçerli 1x1 PNG'ye çevirir
 - `UNDER_REVIEW` sonrası ana akışa geçiş yok; `APPROVED` + `/auth/me` ile `CUSTOMER` doğrulandıktan sonra Devam Et çalışır
 - Swagger test ADMIN hesabı (OpenAPI örnekleri): telefon `+905550000000`, OTP `123456`, e-posta `admin@rencar.com`
+
+---
+
+### Sprint 3 — Gerçek API Vehicles (Batch 3)
+
+- Karar: `DefaultVehicleRepository` prod binding olarak `VehicleRepository` yerine geçer; `FakeVehicleRepository` test/geliştirme için korunur.
+- Son Güncelleme Tarihi: 04.07.2026
+- Uçlar: `GET /vehicles` (type/page/limit), `GET /vehicles/{id}` — Bearer token, **CUSTOMER** rolü gerekir
+- Harita: `MapViewModel` mevcut `listAvailable()` akışını kullanır; koordinatlar API'dan gelir (MapLibre eşlemesi Batch 4)

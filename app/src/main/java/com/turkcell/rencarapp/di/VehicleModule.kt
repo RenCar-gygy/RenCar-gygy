@@ -1,6 +1,6 @@
 package com.turkcell.rencarapp.di
 
-import com.turkcell.rencarapp.data.vehicle.FakeVehicleRepository
+import com.turkcell.rencarapp.data.vehicle.DefaultVehicleRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.Binds
 import dagger.Module
@@ -13,5 +13,5 @@ import javax.inject.Singleton
 abstract class VehicleModule {
     @Binds
     @Singleton
-    abstract fun bindVehicleRepository(impl: FakeVehicleRepository): VehicleRepository
+    abstract fun bindVehicleRepository(impl: DefaultVehicleRepository): VehicleRepository
 }
