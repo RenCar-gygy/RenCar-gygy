@@ -185,3 +185,13 @@
 - Sayfa 2: Harita keşfi — mini harita illüstrasyonu, fiyat pinleri, arama çubuğu
 - Sayfa 3: Hızlı kiralama — 3 adımlı kart (Kayıt ol → Doğrula → Yola çık)
 - Metinler API/stub davranışı uydurmaz; yalnızca kullanıcı yönlendirmesi amaçlıdır
+
+---
+
+### Sprint 3 — Gerçek API Auth (Batch 1)
+
+- Karar: `DefaultAuthRepository` prod binding olarak `AuthRepository` yerine geçer; `FakeAuthRepository` test/geliştirme için korunur.
+- Son Güncelleme Tarihi: 04.07.2026
+- Uçlar: `POST /auth/login` (OTP gönder), `POST /auth/verify-otp`, `POST /auth/register`, `POST /auth/logout`, `GET /auth/me`
+- DTO'lar OpenAPI ile hizalandı (`LoginDto.phone`, `VerifyOtpDto`, `OtpRequiredResponseDto`)
+- Oturum `SessionStore` üzerinden kalıcı; logout/me Bearer token ile çağrılır
