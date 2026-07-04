@@ -27,45 +27,64 @@ class RegisterViewModel @Inject constructor(
 
     fun onIntent(intent: RegisterIntent) {
         when (intent) {
-            is RegisterIntent.PhoneChanged -> updatePhone(intent.value)
+            is RegisterIntent.FullNameChanged -> updateField { it.copy(fullName = intent.value.take(MAX_FULL_NAME_LENGTH)) }
+            is RegisterIntent.EmailChanged -> updateField { it.copy(email = intent.value.trim().take(MAX_EMAIL_LENGTH)) }
+            is RegisterIntent.PasswordChanged -> updateField {
+                it.copy(password = intent.value.take(MAX_PASSWORD_LENGTH))
+            }
+            is RegisterIntent.PhoneChanged -> {
+                val digits = intent.value.filter { it.isDigit() }.take(PHONE_DIGIT_LENGTH)
+                updateField { it.copy(phoneNumber = digits) }
+            }
             RegisterIntent.BackClicked -> sendEffect(RegisterEffect.NavigateBack)
-            RegisterIntent.SendCodeClicked -> sendCode()
+            RegisterIntent.RegisterClicked -> register()
             RegisterIntent.LoginClicked -> sendEffect(RegisterEffect.NavigateToLogin)
         }
     }
 
-    private fun updatePhone(raw: String) {
-        val digits = raw.filter { it.isDigit() }.take(10)
-        _uiState.update {
-            it.copy(
-                phoneNumber = digits,
-                isSendCodeEnabled = digits.length == 10 && digits.startsWith('5'),
-            )
+    private fun updateField(transform: (RegisterUiState) -> RegisterUiState) {
+        _uiState.update { current ->
+            val updated = transform(current)
+            updated.copy(isRegisterEnabled = isFormValid(updated))
         }
     }
 
-    private fun sendCode() {
+    private fun register() {
         val state = _uiState.value
-        if (!state.isSendCodeEnabled || state.isLoading) return
+        if (!state.isRegisterEnabled || state.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val phone = state.phoneNumber
             val result = authRepository.register(
-                email = "$phone@rencar.local",
-                password = REGISTER_STUB_PASSWORD,
-                fullName = REGISTER_STUB_FULL_NAME,
-                phone = phone,
+                email = state.email,
+                password = state.password,
+                fullName = state.fullName.trim(),
+                phone = state.phoneNumber,
             )
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess { sendEffect(RegisterEffect.NavigateToOtp(phoneNumber = phone)) }
+                .onSuccess { sendEffect(RegisterEffect.NavigateToOtp(phoneNumber = state.phoneNumber)) }
                 .onFailure { error ->
                     sendEffect(RegisterEffect.ShowError(error.message ?: "Kayıt tamamlanamadı."))
                 }
         }
     }
+
+    private fun isFormValid(state: RegisterUiState): Boolean =
+        state.fullName.trim().length >= MIN_FULL_NAME_LENGTH &&
+            isValidEmail(state.email) &&
+            state.password.length in MIN_PASSWORD_LENGTH..MAX_PASSWORD_LENGTH &&
+            isValidPhone(state.phoneNumber)
+
+    private fun isValidEmail(email: String): Boolean {
+        if (email.length < MIN_EMAIL_LENGTH) return false
+        val atIndex = email.indexOf('@')
+        return atIndex > 0 && atIndex < email.lastIndex && email.contains('.')
+    }
+
+    private fun isValidPhone(phone: String): Boolean =
+        phone.length == PHONE_DIGIT_LENGTH && phone.startsWith('5')
 
     private fun sendEffect(effect: RegisterEffect) {
         viewModelScope.launch {
@@ -74,7 +93,12 @@ class RegisterViewModel @Inject constructor(
     }
 
     private companion object {
-        const val REGISTER_STUB_PASSWORD = "123456"
-        const val REGISTER_STUB_FULL_NAME = "Kullanıcı"
+        const val MIN_FULL_NAME_LENGTH = 2
+        const val MAX_FULL_NAME_LENGTH = 80
+        const val MIN_EMAIL_LENGTH = 5
+        const val MAX_EMAIL_LENGTH = 120
+        const val MIN_PASSWORD_LENGTH = 6
+        const val MAX_PASSWORD_LENGTH = 72
+        const val PHONE_DIGIT_LENGTH = 10
     }
 }

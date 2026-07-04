@@ -137,8 +137,8 @@
 - Son Güncelleme Tarihi: 03.07.2026
 - Fake OTP kodu: **`123456`** (backend simülasyonu ile uyumlu)
 - Telefon normalizasyonu: UI'daki 10 haneli `5xxxxxxxxx` → API formatı `+905xxxxxxxxx`
-- Register UI geçici uyumu: Telefon-only kayıt ekranı Sprint 2'de fake register için sentetik alanlar kullanır (`{phone}@rencar.local`, parola `123456`, ad `Kullanıcı`); tam form tasarım gelene kadar geçerlidir.
-- Eski `login(email, password)` imzası kaldırıldı; ViewModel entegrasyonu Batch 3'te yapılacaktır.
+- Register UI geçici uyumu (Sprint 2): Telefon-only + sentetik alanlar — **Sprint 3 Batch 5 ile kaldırıldı** (bkz. aşağı).
+- Eski `login(email, password)` imzası kaldırıldı; ViewModel entegrasyonu Batch 3'te yapıldı.
 
 ---
 
@@ -225,3 +225,13 @@
 - `MapVehiclePin` artık `latitude/longitude` taşır; API `VehicleResponseDto` koordinatları haritada GeoJSON pin olarak gösterilir
 - OSM tile istekleri `User-Agent: RenCarApp/1.0` ile yapılır
 - Konum izni / kullanıcı konumu odaklama sonraki iterasyonda ele alınacaktır
+
+---
+
+### Sprint 3 — Kayıt Formu (Batch 5)
+
+- Karar: Stub kayıt (`{phone}@rencar.local`, sabit parola/ad) kaldırıldı; `RegisterScreen` OpenAPI `RegisterDto` alanlarını toplar.
+- Son Güncelleme Tarihi: 04.07.2026
+- Alanlar: `fullName`, `email`, `password` (min 6), `phone` (10 hane, `5` ile başlar)
+- Akış: Kayıt Ol → `POST /auth/register` → OTP ekranı (telefon doğrulama)
+- UI: Login/Register ile aynı görsel dil; kaydırılabilir form
