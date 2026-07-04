@@ -215,3 +215,13 @@
 - Son Güncelleme Tarihi: 04.07.2026
 - Uçlar: `GET /vehicles` (type/page/limit), `GET /vehicles/{id}` — Bearer token, **CUSTOMER** rolü gerekir
 - Harita: `MapViewModel` mevcut `listAvailable()` akışını kullanır; koordinatlar API'dan gelir (MapLibre eşlemesi Batch 4)
+
+---
+
+### Sprint 3 — MapLibre + OSM (Batch 4)
+
+- Karar: Ana harita stub illüstrasyonu yerine MapLibre Android SDK (`11.8.0`) + OpenStreetMap raster tile kullanılır.
+- Son Güncelleme Tarihi: 04.07.2026
+- `MapVehiclePin` artık `latitude/longitude` taşır; API `VehicleResponseDto` koordinatları haritada GeoJSON pin olarak gösterilir
+- OSM tile istekleri `User-Agent: RenCarApp/1.0` ile yapılır
+- Konum izni / kullanıcı konumu odaklama sonraki iterasyonda ele alınacaktır

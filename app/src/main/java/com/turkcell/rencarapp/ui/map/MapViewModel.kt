@@ -54,7 +54,7 @@ class MapViewModel @Inject constructor(
 
             result
                 .onSuccess { vehicles ->
-                    val pins = vehicles.mapIndexed { index, vehicle -> vehicle.toMapPin(index) }
+                    val pins = vehicles.map { vehicle -> vehicle.toMapPin() }
                     _uiState.update { state ->
                         state.copy(
                             vehiclePins = pins,
@@ -91,14 +91,6 @@ class MapViewModel @Inject constructor(
     }
 
     companion object {
-        private val pinOffsets = listOf(
-            0.22f to 0.28f,
-            0.62f to 0.22f,
-            0.48f to 0.42f,
-            0.35f to 0.55f,
-            0.78f to 0.48f,
-        )
-
         private fun filterPins(
             pins: List<MapVehiclePin>,
             category: VehicleCategory,
@@ -108,19 +100,15 @@ class MapViewModel @Inject constructor(
                 else -> pins.filter { it.category == category }
             }
 
-        private fun Vehicle.toMapPin(index: Int): MapVehiclePin {
-            val (offsetX, offsetY) = pinOffsets.getOrElse(index) {
-                pinOffsets[index % pinOffsets.size]
-            }
-            return MapVehiclePin(
+        private fun Vehicle.toMapPin(): MapVehiclePin =
+            MapVehiclePin(
                 id = id,
                 priceLabel = formatPriceLabel(pricePerDay),
                 category = type.toCategory(),
-                offsetXFraction = offsetX,
-                offsetYFraction = offsetY,
+                latitude = latitude,
+                longitude = longitude,
                 isInUse = status != VehicleStatus.AVAILABLE,
             )
-        }
 
         private fun formatPriceLabel(pricePerDay: Double): String {
             val hourlyLikePrice = (pricePerDay / 50.0).roundToInt().coerceAtLeast(1)

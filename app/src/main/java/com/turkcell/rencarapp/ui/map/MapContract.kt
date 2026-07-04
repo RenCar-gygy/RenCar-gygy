@@ -11,8 +11,8 @@ data class MapVehiclePin(
     val id: String,
     val priceLabel: String,
     val category: VehicleCategory,
-    val offsetXFraction: Float,
-    val offsetYFraction: Float,
+    val latitude: Double,
+    val longitude: Double,
     val isInUse: Boolean = false,
 )
 
