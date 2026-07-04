@@ -2,6 +2,7 @@ package com.turkcell.rencarapp.ui.license
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.auth.AuthRepository
 import com.turkcell.rencarapp.data.auth.UserRole
 import com.turkcell.rencarapp.data.license.LicenseRepository
 import com.turkcell.rencarapp.data.license.LicenseStatus
@@ -20,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LicenseViewModel @Inject constructor(
     private val licenseRepository: LicenseRepository,
+    private val authRepository: AuthRepository,
     private val sessionStore: SessionStore,
 ) : ViewModel() {
 
@@ -44,26 +46,37 @@ class LicenseViewModel @Inject constructor(
     private fun loadStatus() {
         viewModelScope.launch {
             licenseRepository.getStatus()
-                .onSuccess { info ->
-                    _uiState.update {
-                        when (info.status) {
-                            LicenseStatus.APPROVED,
-                            LicenseStatus.UNDER_REVIEW,
-                            -> it.copy(
-                                isBackUploaded = true,
-                                isContinueEnabled = true,
-                                rejectReason = null,
-                            )
-                            LicenseStatus.REJECTED -> it.copy(
-                                rejectReason = info.rejectReason,
-                            )
-                            LicenseStatus.NOT_SUBMITTED -> it
-                        }
-                    }
-                }
+                .onSuccess { info -> applyLicenseInfo(info.status, info.rejectReason) }
                 .onFailure { error ->
                     sendEffect(LicenseEffect.ShowError(error.message ?: "Ehliyet durumu alınamadı."))
                 }
+        }
+    }
+
+    private fun applyLicenseInfo(status: LicenseStatus, rejectReason: String?) {
+        _uiState.update {
+            when (status) {
+                LicenseStatus.APPROVED -> it.copy(
+                    isBackUploaded = true,
+                    isContinueEnabled = true,
+                    rejectReason = null,
+                )
+                LicenseStatus.UNDER_REVIEW -> it.copy(
+                    isBackUploaded = true,
+                    isContinueEnabled = false,
+                    rejectReason = null,
+                )
+                LicenseStatus.REJECTED -> it.copy(
+                    isBackUploaded = false,
+                    isContinueEnabled = false,
+                    rejectReason = rejectReason,
+                )
+                LicenseStatus.NOT_SUBMITTED -> it.copy(
+                    isBackUploaded = false,
+                    isContinueEnabled = false,
+                    rejectReason = null,
+                )
+            }
         }
     }
 
@@ -79,12 +92,13 @@ class LicenseViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess {
-                    _uiState.update {
-                        it.copy(
-                            isBackUploaded = true,
-                            isContinueEnabled = true,
-                            rejectReason = null,
+                .onSuccess { info ->
+                    applyLicenseInfo(info.status, info.rejectReason)
+                    if (info.status == LicenseStatus.UNDER_REVIEW) {
+                        sendEffect(
+                            LicenseEffect.ShowError(
+                                "Ehliyetiniz incelenmeye alındı. Onay sonrası devam edebilirsiniz.",
+                            ),
                         )
                     }
                 }
@@ -99,18 +113,32 @@ class LicenseViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val session = sessionStore.getSession()
-            if (session == null) {
-                _uiState.update { it.copy(isLoading = false) }
-                sendEffect(LicenseEffect.ShowError("Oturum bulunamadı."))
-                return@launch
-            }
 
-            sessionStore.saveSession(
-                session.copy(user = session.user.copy(role = UserRole.CUSTOMER)),
-            )
-            _uiState.update { it.copy(isLoading = false) }
-            sendEffect(LicenseEffect.NavigateToMain)
+            authRepository.getCurrentUser()
+                .onSuccess { user ->
+                    if (user.role != UserRole.CUSTOMER) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        sendEffect(
+                            LicenseEffect.ShowError("Ehliyet onayı henüz tamamlanmadı."),
+                        )
+                        return@launch
+                    }
+
+                    val session = sessionStore.getSession()
+                    if (session == null) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        sendEffect(LicenseEffect.ShowError("Oturum bulunamadı."))
+                        return@launch
+                    }
+
+                    sessionStore.saveSession(session.copy(user = user))
+                    _uiState.update { it.copy(isLoading = false) }
+                    sendEffect(LicenseEffect.NavigateToMain)
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    sendEffect(LicenseEffect.ShowError(error.message ?: "Oturum doğrulanamadı."))
+                }
         }
     }
 

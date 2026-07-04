@@ -195,3 +195,14 @@
 - Uçlar: `POST /auth/login` (OTP gönder), `POST /auth/verify-otp`, `POST /auth/register`, `POST /auth/logout`, `GET /auth/me`
 - DTO'lar OpenAPI ile hizalandı (`LoginDto.phone`, `VerifyOtpDto`, `OtpRequiredResponseDto`)
 - Oturum `SessionStore` üzerinden kalıcı; logout/me Bearer token ile çağrılır
+
+---
+
+### Sprint 3 — Gerçek API License (Batch 2)
+
+- Karar: `DefaultLicenseRepository` prod binding olarak `LicenseRepository` yerine geçer; `FakeLicenseRepository` test/geliştirme için korunur.
+- Son Güncelleme Tarihi: 04.07.2026
+- Uçlar: `GET /license/status`, `POST /license/upload` (multipart: `front`, `back`; Bearer token)
+- Stub yükleme: UI henüz gerçek fotoğraf seçmiyor; repository tek bayt stub'ı geçerli 1x1 PNG'ye çevirir
+- `UNDER_REVIEW` sonrası ana akışa geçiş yok; `APPROVED` + `/auth/me` ile `CUSTOMER` doğrulandıktan sonra Devam Et çalışır
+- Swagger test ADMIN hesabı (OpenAPI örnekleri): telefon `+905550000000`, OTP `123456`, e-posta `admin@rencar.com`
