@@ -22,7 +22,6 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
-// --- Furkan ve Çağla'nın Ekran Importları ---
 import com.turkcell.rencarapp.ui.auth.login.LoginRoute
 import com.turkcell.rencarapp.ui.auth.otp.OtpRoute
 import com.turkcell.rencarapp.ui.auth.register.RegisterRoute
@@ -32,7 +31,6 @@ import com.turkcell.rencarapp.ui.onboarding.OnboardingRoute
 import com.turkcell.rencarapp.ui.profile.ProfileRoute
 import com.turkcell.rencarapp.ui.splash.SplashRoute
 
-// --- Eklenen Yeni Çağla Ekranları Importları ---
 import com.turkcell.rencarapp.ui.payment.wallet.WalletRoute
 import com.turkcell.rencarapp.ui.rental.active.ActiveRentalRoute
 import com.turkcell.rencarapp.ui.rental.confirmation.RentalConfirmationRoute
@@ -40,11 +38,6 @@ import com.turkcell.rencarapp.ui.rental.delivery_photos.DeliveryPhotosRoute
 import com.turkcell.rencarapp.ui.vehicle.detail.VehicleDetailRoute
 import com.turkcell.rencarapp.ui.rental.history.RentalHistoryRoute
 import com.turkcell.rencarapp.ui.rental.summary.RentalSummaryRoute
-
-/**
- * Sprint 0-1 navigasyon iskeleti — iç içe grafikler.
- * Ekip bölüşümüne göre tamamlanan ekranlar bağlanmıştır.
- */
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -192,18 +185,14 @@ fun RenCarNavHost(
                     )
                 }
 
-                // --- ÇAĞLA'NIN EKRANLARI ---
-
                 composable(RenCarDestination.RentalHistory) {
-                    // Eğer burada hata alıyorsan, RentalHistoryRoute fonksiyonun
-                    // parametrelerini kontrol et. Eğer parametre almıyorsa parantezi boş bırak.
                     RentalHistoryRoute(
                         onShowSnackbar = {}
                     )
                 }
                 composable(RenCarDestination.Wallet) {
                     WalletRoute(
-                        onShowSnackbar = { _ -> /* TODO */ }
+                        onShowSnackbar = { _ -> }
                     )
                 }
                 composable(RenCarDestination.Profile) {
@@ -213,7 +202,12 @@ fun RenCarNavHost(
                                 popUpTo(RenCarDestination.MainGraph) { inclusive = true }
                             }
                         },
-                        onShowSnackbar = { _ -> /* TODO */ },
+                        onNavigateToWallet = {
+                            navController.navigate(RenCarDestination.Wallet) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onShowSnackbar = { _ -> },
                     )
                 }
 
@@ -221,7 +215,6 @@ fun RenCarNavHost(
                     startDestination = RenCarDestination.VehicleDetail,
                     route = RenCarDestination.RentalGraph,
                 ) {
-                    // --- NAZLI'NIN EKRANLARI (Placeholder olarak korundu) ---
                     composable(
                         route = RenCarDestination.VehicleDetail,
                         arguments = listOf(
@@ -249,7 +242,6 @@ fun RenCarNavHost(
                         )
                     }
 
-                    // --- ÇAĞLA'NIN EKRANI ---
                     composable(
                         route = RenCarDestination.RentalSummary,
                         arguments = listOf(
@@ -267,11 +259,10 @@ fun RenCarNavHost(
                                     launchSingleTop = true
                                 }
                             },
-                            onShowSnackbar = { _ -> /* TODO */ }
+                            onShowSnackbar = { _ -> }
                         )
                     }
 
-                    // --- NAZLI'NIN EKRANLARI (Placeholder olarak korundu) ---
                     composable(
                         route = RenCarDestination.DeliveryPhotos,
                         arguments = listOf(

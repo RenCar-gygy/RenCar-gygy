@@ -1,6 +1,10 @@
 package com.turkcell.rencarapp.ui.profile
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,11 +18,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 
@@ -26,6 +31,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun ProfileRoute(
     viewModel: ProfileViewModel = hiltViewModel(),
     onNavigateToSplash: () -> Unit,
+    onNavigateToWallet: () -> Unit, // YENİ EKLENDİ
     onShowSnackbar: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -34,6 +40,7 @@ fun ProfileRoute(
         viewModel.effect.collectLatest { effect ->
             when (effect) {
                 is ProfileEffect.NavigateToSplash -> onNavigateToSplash()
+                is ProfileEffect.NavigateToWallet -> onNavigateToWallet() // Cüzdana geçiş
                 is ProfileEffect.ShowError -> onShowSnackbar(effect.message)
             }
         }
@@ -62,53 +69,49 @@ fun ProfileScreen(
                 CircularProgressIndicator()
             }
         } else {
-            // Kullanıcı Bilgileri Başlığı ve Düzenle Butonu
+            Spacer(modifier = Modifier.height(48.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Spacer(modifier = Modifier.weight(1f)) // Ortalamak için boşluk
-
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(3f)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = state.fullName.ifBlank { "Kullanıcı" },
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = state.phone.ifBlank { "Telefon bilgisi yok" },
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.CenterEnd
+                Spacer(modifier = Modifier.width(16.dp))
+
+                IconButton(
+                    onClick = { onIntent(ProfileIntent.EditProfileClicked) },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 ) {
-                    IconButton(
-                        onClick = { /* TODO: Profil düzenleme */ },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Edit,
-                            contentDescription = "Düzenle",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.Edit,
+                        contentDescription = "Düzenle",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // Ehliyet Durumu Kartı
             val isVerified = state.isLicenseVerified
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -163,7 +166,6 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Menü Öğeleri
             ProfileMenuItem(
                 title = "Ödeme yöntemleri",
                 icon = Icons.Rounded.Payment,
@@ -187,7 +189,14 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Çıkış Yap Butonu
+            // Tema Butonu En Altta, Çıkış Yap'ın Üstünde
+            CustomThemeSwitch(
+                isDark = state.isDarkMode,
+                onToggle = { onIntent(ProfileIntent.ThemeToggleClicked) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             OutlinedButton(
                 onClick = { onIntent(ProfileIntent.LogoutClicked) },
                 modifier = Modifier
@@ -207,7 +216,7 @@ fun ProfileScreen(
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Çıkış yap", style = MaterialTheme.typography.titleMedium)
+                Text(text = "Çıkış yap", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -247,6 +256,52 @@ fun ProfileMenuItem(title: String, icon: ImageVector, onClick: () -> Unit) {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun CustomThemeSwitch(
+    isDark: Boolean,
+    onToggle: () -> Unit
+) {
+    val thumbOffset by animateDpAsState(
+        targetValue = if (isDark) 40.dp else 4.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "thumbOffset"
+    )
+    val bgColor by animateColorAsState(
+        targetValue = if (isDark) Color(0xFF37474F) else Color(0xFF64B5F6),
+        animationSpec = tween(durationMillis = 300),
+        label = "bgColor"
+    )
+    val thumbColor by animateColorAsState(
+        targetValue = if (isDark) Color(0xFFCFD8DC) else Color(0xFFFFD54F),
+        animationSpec = tween(durationMillis = 300),
+        label = "thumbColor"
+    )
+
+    Box(
+        modifier = Modifier
+            .width(80.dp)
+            .height(40.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgColor)
+            .clickable { onToggle() },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = thumbOffset)
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(thumbColor)
+        ) {
+            if (isDark) {
+                Box(modifier = Modifier.size(6.dp).offset(x = 6.dp, y = 8.dp).clip(CircleShape).background(Color(0xFF90A4AE)))
+                Box(modifier = Modifier.size(8.dp).offset(x = 18.dp, y = 14.dp).clip(CircleShape).background(Color(0xFF90A4AE)))
+                Box(modifier = Modifier.size(5.dp).offset(x = 10.dp, y = 20.dp).clip(CircleShape).background(Color(0xFF90A4AE)))
+            }
         }
     }
 }
