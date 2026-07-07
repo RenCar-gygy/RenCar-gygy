@@ -1,12 +1,12 @@
 package com.turkcell.rencarapp.ui.vehicle.detail
 
-import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
+import com.turkcell.rencarapp.data.vehicle.Vehicle
 
 /**
  * Vehicle Detail ekranının durumunu temsil eder.
  */
 data class VehicleDetailUiState(
-    val vehicle: VehicleResponseDto? = null,
+    val vehicle: Vehicle? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     // API'da olmayan ancak tasarımda bulunan mock alanlar

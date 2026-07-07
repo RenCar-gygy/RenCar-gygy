@@ -76,14 +76,27 @@ fun VehicleDetailScreen(
         }
 
         // Ana Kart
-        Card(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(top = 100.dp),
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
+        if (state.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else if (state.error != null) {
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = state.error, color = Color.Red)
+                Button(onClick = { onIntent(VehicleDetailIntent.LoadVehicle) }) {
+                    Text("Tekrar Dene")
+                }
+            }
+        } else if (state.vehicle != null) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(top = 100.dp),
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
             Column(
                 modifier = Modifier
                     .padding(24.dp)
@@ -97,12 +110,12 @@ fun VehicleDetailScreen(
                 ) {
                     Column {
                         Text(
-                            text = "${state.vehicle?.brand ?: ""} ${state.vehicle?.model ?: ""}",
+                            text = "${state.vehicle.brand} ${state.vehicle.model}",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${state.vehicle?.plate ?: ""} • 250 m uzaklıkta",
+                            text = "${state.vehicle.plate} • 250 m uzaklıkta",
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -113,7 +126,7 @@ fun VehicleDetailScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
-                            text = state.vehicle?.type ?: "MÜSAİT",
+                            text = state.vehicle.status.name,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                             color = Color(0xFF2E7D32),
                             fontSize = 12.sp,
@@ -193,7 +206,7 @@ fun VehicleDetailScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Saatlik ₺${state.vehicle?.pricePerDay?.toInt() ?: 180}",
+                            text = "Saatlik ₺${state.vehicle.pricePerDay.toInt()}",
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -231,6 +244,7 @@ fun VehicleDetailScreen(
                 }
             }
         }
+    }
     }
 }
 

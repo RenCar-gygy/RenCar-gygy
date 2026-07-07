@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun RentalConfirmationRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToSummary: (String) -> Unit,
+    onNavigateToSummary: (String, String) -> Unit,
     viewModel: RentalConfirmationViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -39,7 +39,7 @@ fun RentalConfirmationRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is RentalConfirmationEffect.NavigateBack -> onNavigateBack()
-                is RentalConfirmationEffect.NavigateToSummary -> onNavigateToSummary(effect.vehicleId)
+                is RentalConfirmationEffect.NavigateToSummary -> onNavigateToSummary(effect.vehicleId, effect.plan)
                 is RentalConfirmationEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -91,69 +91,83 @@ fun RentalConfirmationScreen(
         },
         containerColor = Color(0xFFF8F9FA)
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Araç Kartı
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Araç Görseli Placeholder
-                    Surface(
-                        modifier = Modifier.size(80.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF5F5F5)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsCar,
-                            contentDescription = null,
-                            modifier = Modifier.padding(12.dp),
-                            tint = Color.LightGray
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text(
-                            text = "${state.vehicle?.brand ?: ""} ${state.vehicle?.model ?: ""}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                        Text(
-                            text = "${state.vehicle?.plate ?: ""} • Manuel • 5 kişi",
-                            color = Color.Gray,
-                            fontSize = 13.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            color = Color(0xFFE8F5E9),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "Yakıt %72",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                color = Color(0xFF2E7D32),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+        if (state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.error != null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = state.error, color = Color.Red)
+                    Button(onClick = { onIntent(RentalConfirmationIntent.LoadVehicle) }) {
+                        Text("Tekrar Dene")
                     }
                 }
             }
+        } else if (state.vehicle != null) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Araç Kartı
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Araç Görseli Placeholder
+                        Surface(
+                            modifier = Modifier.size(80.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF5F5F5)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DirectionsCar,
+                                contentDescription = null,
+                                modifier = Modifier.padding(12.dp),
+                                tint = Color.LightGray
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(
+                                text = "${state.vehicle.brand} ${state.vehicle.model}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "${state.vehicle.plate} • Manuel • 5 kişi",
+                                color = Color.Gray,
+                                fontSize = 13.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                color = Color(0xFFE8F5E9),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "Yakıt %72",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    color = Color(0xFF2E7D32),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -164,7 +178,7 @@ fun RentalConfirmationScreen(
             Row(modifier = Modifier.fillMaxWidth()) {
                 PlanItem(
                     title = "Dakikalık",
-                    price = "₺4,50/dk",
+                    price = state.minutelyPriceLabel,
                     isSelected = state.selectedPlan == RentalPlan.MINUTELY,
                     onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.MINUTELY)) },
                     modifier = Modifier.weight(1f)
@@ -172,7 +186,7 @@ fun RentalConfirmationScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 PlanItem(
                     title = "Saatlik",
-                    price = "₺180/sa",
+                    price = state.hourlyPriceLabel,
                     isSelected = state.selectedPlan == RentalPlan.HOURLY,
                     onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.HOURLY)) },
                     modifier = Modifier.weight(1f)
@@ -180,7 +194,7 @@ fun RentalConfirmationScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 PlanItem(
                     title = "Günlük",
-                    price = "₺1.450",
+                    price = state.dailyPriceLabel,
                     isSelected = state.selectedPlan == RentalPlan.DAILY,
                     onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.DAILY)) },
                     modifier = Modifier.weight(1f)
@@ -219,6 +233,7 @@ fun RentalConfirmationScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
 }
 
 @Composable

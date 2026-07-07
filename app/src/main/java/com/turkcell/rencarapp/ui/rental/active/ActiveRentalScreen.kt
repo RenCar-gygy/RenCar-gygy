@@ -46,6 +46,15 @@ fun ActiveRentalRoute(
         state = uiState,
         onIntent = viewModel::onIntent
     )
+
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
 }
 
 @Composable
