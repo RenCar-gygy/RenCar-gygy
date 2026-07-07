@@ -6,7 +6,7 @@ sealed interface RentalSummaryIntent {
 }
 
 sealed interface RentalSummaryEffect {
-    data class NavigateToDeliveryPhotos(val vehicleId: String) : RentalSummaryEffect
+    data class NavigateToDeliveryPhotos(val rentalId: String) : RentalSummaryEffect
     data class ShowToast(val message: String) : RentalSummaryEffect
     data class ShowError(val message: String) : RentalSummaryEffect
 }
@@ -14,6 +14,7 @@ sealed interface RentalSummaryEffect {
 data class RentalSummaryUiState(
     val isLoading: Boolean = false,
     val vehicleId: String = "",
+    val selectedPlan: String? = null,
     val vehicleName: String = "",
     val plate: String = "",
     val durationText: String = "24 dk",

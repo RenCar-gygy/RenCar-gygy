@@ -33,7 +33,7 @@ fun RentalSummaryRoute(
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
-                is RentalSummaryEffect.NavigateToDeliveryPhotos -> onNavigateToDeliveryPhotos(effect.vehicleId)
+                is RentalSummaryEffect.NavigateToDeliveryPhotos -> onNavigateToDeliveryPhotos(effect.rentalId)
                 is RentalSummaryEffect.ShowError -> onShowSnackbar(effect.message)
                 is RentalSummaryEffect.ShowToast -> onShowSnackbar(effect.message)
             }

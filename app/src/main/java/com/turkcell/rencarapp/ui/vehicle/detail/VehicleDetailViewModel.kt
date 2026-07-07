@@ -3,7 +3,7 @@ package com.turkcell.rencarapp.ui.vehicle.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
+import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VehicleDetailViewModel @Inject constructor(
+    private val vehicleRepository: VehicleRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -56,28 +57,26 @@ class VehicleDetailViewModel @Inject constructor(
 
     private fun loadVehicle() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, error = null) }
             
-            // Simüle edilmiş gecikme ve sahte veri (Fake Repository mantığı)
-            // Normalde VehicleRepository üzerinden çekilmeli
-            val fakeVehicle = VehicleResponseDto(
-                id = vehicleId,
-                plate = "34 RNC 022",
-                brand = "Renault",
-                model = "Clio",
-                type = "MÜSAİT",
-                pricePerDay = 180.0,
-                status = "AVAILABLE",
-                latitude = 41.0,
-                longitude = 29.0
-            )
-            
-            _uiState.update { 
-                it.copy(
-                    vehicle = fakeVehicle, 
-                    isLoading = false
-                ) 
-            }
+            vehicleRepository.getById(vehicleId)
+                .onSuccess { vehicle ->
+                    _uiState.update { 
+                        it.copy(
+                            vehicle = vehicle, 
+                            isLoading = false
+                        ) 
+                    }
+                }
+                .onFailure { exception ->
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "Araç bilgileri alınamadı."
+                        ) 
+                    }
+                    _effect.send(VehicleDetailEffect.ShowMessage(exception.message ?: "Hata oluştu."))
+                }
         }
     }
 }

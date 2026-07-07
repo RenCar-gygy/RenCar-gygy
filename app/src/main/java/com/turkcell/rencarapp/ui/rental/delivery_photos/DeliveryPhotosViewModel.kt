@@ -19,7 +19,7 @@ class DeliveryPhotosViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val vehicleId: String = checkNotNull(savedStateHandle["vehicleId"])
+    private val rentalId: String = checkNotNull(savedStateHandle["rentalId"])
 
     private val _uiState = MutableStateFlow(DeliveryPhotosUiState())
     val uiState: StateFlow<DeliveryPhotosUiState> = _uiState.asStateFlow()
@@ -48,10 +48,10 @@ class DeliveryPhotosViewModel @Inject constructor(
         
         viewModelScope.launch {
             _uiState.update { it.copy(isStartingRental = true) }
-            // Simüle edilmiş kiralama başlatma
-            kotlinx.coroutines.delay(1000)
+            // API'da fotoğraf yükleme olmadığı için sadece simüle ediyoruz
+            kotlinx.coroutines.delay(800)
             _uiState.update { it.copy(isStartingRental = false) }
-            _effect.send(DeliveryPhotosEffect.NavigateToActiveRental("rental_123"))
+            _effect.send(DeliveryPhotosEffect.NavigateToActiveRental(rentalId))
         }
     }
 }

@@ -30,20 +30,21 @@ object RenCarDestination {
     const val RentalGraph = "rental"
     const val VehicleDetail = "rental/vehicle/{vehicleId}"
     const val RentalConfirmation = "rental/confirmation/{vehicleId}"
-    const val RentalSummary = "rental/summary/{vehicleId}"
-    const val DeliveryPhotos = "rental/delivery_photos/{vehicleId}"
+    const val RentalSummary = "rental/summary/{vehicleId}?plan={plan}"
+    const val DeliveryPhotos = "rental/delivery_photos/{rentalId}"
     const val ActiveRental = "rental/active/{rentalId}"
 
     const val ARG_VEHICLE_ID = "vehicleId"
     const val ARG_RENTAL_ID = "rentalId"
+    const val ARG_PLAN = "plan"
 
     fun vehicleDetailRoute(vehicleId: String): String = "rental/vehicle/$vehicleId"
 
     fun rentalConfirmationRoute(vehicleId: String): String = "rental/confirmation/$vehicleId"
 
-    fun rentalSummaryRoute(vehicleId: String): String = "rental/summary/$vehicleId"
+    fun rentalSummaryRoute(vehicleId: String, plan: String): String = "rental/summary/$vehicleId?plan=$plan"
 
-    fun deliveryPhotosRoute(vehicleId: String): String = "rental/delivery_photos/$vehicleId"
+    fun deliveryPhotosRoute(rentalId: String): String = "rental/delivery_photos/$rentalId"
 
     fun activeRentalRoute(rentalId: String): String = "rental/active/$rentalId"
 

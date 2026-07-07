@@ -243,8 +243,8 @@ fun RenCarNavHost(
                     ) {
                         RentalConfirmationRoute(
                             onNavigateBack = { navController.popBackStack() },
-                            onNavigateToSummary = { vehicleId ->
-                                navController.navigate(RenCarDestination.rentalSummaryRoute(vehicleId))
+                            onNavigateToSummary = { vehicleId, plan ->
+                                navController.navigate(RenCarDestination.rentalSummaryRoute(vehicleId, plan))
                             }
                         )
                     }
@@ -254,11 +254,16 @@ fun RenCarNavHost(
                         route = RenCarDestination.RentalSummary,
                         arguments = listOf(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_PLAN) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
                         ),
                     ) {
                         RentalSummaryRoute(
-                            onNavigateToDeliveryPhotos = { vehicleId ->
-                                navController.navigate(RenCarDestination.deliveryPhotosRoute(vehicleId)) {
+                            onNavigateToDeliveryPhotos = { rentalId ->
+                                navController.navigate(RenCarDestination.deliveryPhotosRoute(rentalId)) {
                                     launchSingleTop = true
                                 }
                             },
@@ -270,7 +275,7 @@ fun RenCarNavHost(
                     composable(
                         route = RenCarDestination.DeliveryPhotos,
                         arguments = listOf(
-                            navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
                         ),
                     ) {
                         DeliveryPhotosRoute(
