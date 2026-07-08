@@ -211,10 +211,14 @@ fun RenCarNavHost(
                     )
                 }
 
+                // ==========================================
+                // YENİ KİRALAMA AKIŞI (RENTAL GRAPH)
+                // ==========================================
                 navigation(
                     startDestination = RenCarDestination.VehicleDetail,
                     route = RenCarDestination.RentalGraph,
                 ) {
+                    // 1. ADIM: Araç Detay
                     composable(
                         route = RenCarDestination.VehicleDetail,
                         arguments = listOf(
@@ -228,6 +232,8 @@ fun RenCarNavHost(
                             }
                         )
                     }
+
+                    // 2. ADIM: Rezervasyon ve Şartlar
                     composable(
                         route = RenCarDestination.RentalConfirmation,
                         arguments = listOf(
@@ -236,33 +242,31 @@ fun RenCarNavHost(
                     ) {
                         RentalConfirmationRoute(
                             onNavigateBack = { navController.popBackStack() },
-                            onNavigateToSummary = { vehicleId, plan ->
-                                navController.navigate(RenCarDestination.rentalSummaryRoute(vehicleId, plan))
+                            // Onaydan sonra Aktif Kiralamaya (Kilidi Aç) geçer
+                            onNavigateToActiveRental = { rentalId ->
+                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
                             }
                         )
                     }
 
+                    // 3. ADIM: Aktif Kiralama (Kullanım ve Sayaç)
                     composable(
-                        route = RenCarDestination.RentalSummary,
+                        route = RenCarDestination.ActiveRental,
                         arguments = listOf(
-                            navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
-                            navArgument(RenCarDestination.ARG_PLAN) {
-                                type = NavType.StringType
-                                nullable = true
-                                defaultValue = null
-                            },
+                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
                         ),
                     ) {
-                        RentalSummaryRoute(
+                        ActiveRentalRoute(
+                            // Kiralama bitirildiğinde Teslimat Fotoğraflarına geçer
                             onNavigateToDeliveryPhotos = { rentalId ->
                                 navController.navigate(RenCarDestination.deliveryPhotosRoute(rentalId)) {
                                     launchSingleTop = true
                                 }
-                            },
-                            onShowSnackbar = { _ -> }
+                            }
                         )
                     }
 
+                    // 4. ADIM: Teslimat Fotoğrafları Çekimi
                     composable(
                         route = RenCarDestination.DeliveryPhotos,
                         arguments = listOf(
@@ -271,23 +275,28 @@ fun RenCarNavHost(
                     ) {
                         DeliveryPhotosRoute(
                             onNavigateBack = { navController.popBackStack() },
-                            onNavigateToActiveRental = { rentalId ->
-                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
+                            // Fotoğraflar yüklendikten sonra Özet ve Ödemeye (Fatura) geçer
+                            onNavigateToSummary = { rentalId ->
+                                navController.navigate(RenCarDestination.rentalSummaryRoute(rentalId))
                             }
                         )
                     }
+
+                    // 5. ADIM: Ödeme ve Kiralama Özeti (Fatura)
                     composable(
-                        route = RenCarDestination.ActiveRental,
+                        route = RenCarDestination.RentalSummary,
                         arguments = listOf(
-                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType }
                         ),
                     ) {
-                        ActiveRentalRoute(
-                            onNavigateToMain = {
-                                navController.navigate(RenCarDestination.MainGraph) {
-                                    popUpTo(RenCarDestination.Map) { inclusive = true }
+                        RentalSummaryRoute(
+                            // Ödeme tamamlandığında Ana Ekrana (Map) döner
+                            onNavigateToHome = {
+                                navController.navigate(RenCarDestination.Map) {
+                                    popUpTo(RenCarDestination.MainGraph) { inclusive = true }
                                 }
-                            }
+                            },
+                            onShowSnackbar = { _ -> }
                         )
                     }
                 }

@@ -1,12 +1,11 @@
 package com.turkcell.rencarapp.ui.rental.delivery_photos
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,7 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,18 +31,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun DeliveryPhotosRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToActiveRental: (String) -> Unit,
+    // GÜNCELLENDİ: NavHost ile eşleşmesi için Faturaya (Summary) yönlendiriyoruz
+    onNavigateToSummary: (String) -> Unit,
     viewModel: DeliveryPhotosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is DeliveryPhotosEffect.NavigateBack -> onNavigateBack()
-                is DeliveryPhotosEffect.NavigateToActiveRental -> onNavigateToActiveRental(effect.rentalId)
+                // ViewModel'i bozmamak için eski NavigateToActiveRental komutunu Summary'ye yönlendirdim
+                is DeliveryPhotosEffect.NavigateToActiveRental -> onNavigateToSummary(effect.rentalId)
                 is DeliveryPhotosEffect.ShowError -> {
-                    // Show error toast
+                    Toast.makeText(context, "Bir hata oluştu", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -107,21 +109,22 @@ fun DeliveryPhotosScreen(
                 }
 
                 Button(
-                    onClick = { onIntent(DeliveryPhotosIntent.StartRentalClicked) },
+                    onClick = { onIntent(DeliveryPhotosIntent.StartRentalClicked) }, // Adı aynı kaldı ki kodların çökmesin
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     enabled = state.isComplete && !state.isStartingRental,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1565C0),
+                        containerColor = Color(0xFF1E63D8), // Daha estetik mavi tonu
                         disabledContainerColor = Color(0xFFE0E0E0)
                     )
                 ) {
                     if (state.isStartingRental) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
-                        val buttonText = if (state.isComplete) "Kiralamayı Başlat" else "Kiralamayı Başlat - ${state.remainingCount} foto kaldı"
+                        // GÜNCELLENDİ: Metinler "Kiralamayı başlat" yerine fotoğrafların bitişine uyarlandı
+                        val buttonText = if (state.isComplete) "Fotoğrafları Onayla ve Bitir" else "Eksik Fotoğrafları Tamamla"
                         Text(buttonText, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -136,12 +139,12 @@ fun DeliveryPhotosScreen(
                 .padding(horizontal = 24.dp)
         ) {
             Text(
-                text = "Araç durumu",
+                text = "Araç teslimi",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Başlamadan önce 4 yönü çek",
+                text = "Bitirmeden önce 4 yönü çek",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )
@@ -161,7 +164,7 @@ fun DeliveryPhotosScreen(
                 Text(
                     text = "${state.capturedCount} / 4 çekildi",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1565C0)
+                    color = Color(0xFF1E63D8)
                 )
             }
 
@@ -173,8 +176,7 @@ fun DeliveryPhotosScreen(
                     PhotoBox(
                         direction = PhotoDirection.FRONT,
                         uri = state.photos[PhotoDirection.FRONT],
-                        onClick = { 
-                            // In a real app, launch camera. Here we mock it.
+                        onClick = {
                             onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.FRONT, Uri.parse("mock_uri")))
                         },
                         modifier = Modifier.weight(1f)
@@ -183,7 +185,7 @@ fun DeliveryPhotosScreen(
                     PhotoBox(
                         direction = PhotoDirection.BACK,
                         uri = state.photos[PhotoDirection.BACK],
-                        onClick = { 
+                        onClick = {
                             onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.BACK, Uri.parse("mock_uri")))
                         },
                         modifier = Modifier.weight(1f)
@@ -194,7 +196,7 @@ fun DeliveryPhotosScreen(
                     PhotoBox(
                         direction = PhotoDirection.LEFT,
                         uri = state.photos[PhotoDirection.LEFT],
-                        onClick = { 
+                        onClick = {
                             onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.LEFT, Uri.parse("mock_uri")))
                         },
                         modifier = Modifier.weight(1f)
@@ -203,7 +205,7 @@ fun DeliveryPhotosScreen(
                     PhotoBox(
                         direction = PhotoDirection.RIGHT,
                         uri = state.photos[PhotoDirection.RIGHT],
-                        onClick = { 
+                        onClick = {
                             onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.RIGHT, Uri.parse("mock_uri")))
                         },
                         modifier = Modifier.weight(1f)
@@ -222,7 +224,7 @@ fun PhotoBox(
     modifier: Modifier = Modifier
 ) {
     val isCaptured = uri != null
-    
+
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -244,7 +246,7 @@ fun PhotoBox(
             Icon(
                 imageVector = if (isCaptured) Icons.Default.DirectionsCar else Icons.Default.PhotoCamera,
                 contentDescription = null,
-                tint = if (isCaptured) Color(0xFF80CBC4) else Color(0xFF1565C0),
+                tint = if (isCaptured) Color(0xFF80CBC4) else Color(0xFF1E63D8),
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))

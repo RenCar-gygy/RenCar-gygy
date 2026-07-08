@@ -30,7 +30,10 @@ object RenCarDestination {
     const val RentalGraph = "rental"
     const val VehicleDetail = "rental/vehicle/{vehicleId}"
     const val RentalConfirmation = "rental/confirmation/{vehicleId}"
-    const val RentalSummary = "rental/summary/{vehicleId}?plan={plan}"
+
+    // GÜNCELLENDİ: Artık kiralama bittikten sonra çağrıldığı için sadece rentalId alıyor
+    const val RentalSummary = "rental/summary/{rentalId}"
+
     const val DeliveryPhotos = "rental/delivery_photos/{rentalId}"
     const val ActiveRental = "rental/active/{rentalId}"
 
@@ -42,7 +45,8 @@ object RenCarDestination {
 
     fun rentalConfirmationRoute(vehicleId: String): String = "rental/confirmation/$vehicleId"
 
-    fun rentalSummaryRoute(vehicleId: String, plan: String): String = "rental/summary/$vehicleId?plan=$plan"
+    // GÜNCELLENDİ: Eskiden vehicleId ve plan alıyordu, şimdi sadece faturanın ait olduğu rentalId'yi alıyor
+    fun rentalSummaryRoute(rentalId: String): String = "rental/summary/$rentalId"
 
     fun deliveryPhotosRoute(rentalId: String): String = "rental/delivery_photos/$rentalId"
 

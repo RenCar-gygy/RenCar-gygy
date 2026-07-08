@@ -1,8 +1,12 @@
 package com.turkcell.rencarapp.ui.rental.confirmation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.rental.CreateRentalRequest
+import com.turkcell.rencarapp.data.rental.RentalRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -12,11 +16,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
+@RequiresApi(Build.VERSION_CODES.O)
 @HiltViewModel
 class RentalConfirmationViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val rentalRepository: RentalRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -39,7 +47,7 @@ class RentalConfirmationViewModel @Inject constructor(
                 viewModelScope.launch { _effect.send(RentalConfirmationEffect.NavigateBack) }
             }
             is RentalConfirmationIntent.PlanSelected -> {
-                _uiState.update { 
+                _uiState.update {
                     val newState = it.copy(selectedPlan = intent.plan)
                     calculatePrices(newState)
                 }
@@ -48,20 +56,7 @@ class RentalConfirmationViewModel @Inject constructor(
                 _uiState.update { it.copy(isTermsAccepted = intent.accepted) }
             }
             is RentalConfirmationIntent.CompleteReservationClicked -> {
-                if (_uiState.value.isTermsAccepted) {
-                    viewModelScope.launch {
-                        _effect.send(
-                            RentalConfirmationEffect.NavigateToSummary(
-                                vehicleId = vehicleId,
-                                plan = _uiState.value.selectedPlan.name
-                            )
-                        )
-                    }
-                } else {
-                    viewModelScope.launch {
-                        _effect.send(RentalConfirmationEffect.ShowError("Lütfen kullanım şartlarını onaylayın."))
-                    }
-                }
+                createRentalAndStart()
             }
         }
     }
@@ -73,28 +68,60 @@ class RentalConfirmationViewModel @Inject constructor(
             vehicleRepository.getById(vehicleId)
                 .onSuccess { vehicle ->
                     _uiState.update {
-                        val newState = it.copy(
-                            vehicle = vehicle,
-                            isLoading = false
-                        )
+                        val newState = it.copy(vehicle = vehicle, isLoading = false)
                         calculatePrices(newState)
                     }
                 }
                 .onFailure { exception ->
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Araç bilgileri alınamadı."
-                        )
+                        it.copy(isLoading = false, error = exception.message ?: "Araç bilgileri alınamadı.")
                     }
                     _effect.send(RentalConfirmationEffect.ShowError(exception.message ?: "Hata oluştu."))
                 }
         }
     }
 
+    private fun createRentalAndStart() {
+        if (!_uiState.value.isTermsAccepted) {
+            viewModelScope.launch {
+                _effect.send(RentalConfirmationEffect.ShowError("Lütfen kullanım şartlarını onaylayın."))
+            }
+            return
+        }
+
+        if (_uiState.value.isLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+
+            val endDate = calculateEndDate(_uiState.value.selectedPlan)
+            val request = CreateRentalRequest(vehicleId, endDate)
+
+            rentalRepository.create(request)
+                .onSuccess { rental ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    // Başarıyla kiralandıysa, faturaya değil Aktif Kiralamaya git!
+                    _effect.send(RentalConfirmationEffect.NavigateToActiveRental(rental.id))
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    _effect.send(RentalConfirmationEffect.ShowError(error.message ?: "Kiralama başlatılamadı."))
+                }
+        }
+    }
+
+    private fun calculateEndDate(plan: RentalPlan): Instant {
+        val now = Instant.now()
+        return when (plan) {
+            RentalPlan.MINUTELY -> now.plus(30, ChronoUnit.MINUTES)
+            RentalPlan.HOURLY -> now.plus(1, ChronoUnit.HOURS)
+            RentalPlan.DAILY -> now.plus(1, ChronoUnit.DAYS)
+        }
+    }
+
     private fun calculatePrices(state: RentalConfirmationUiState): RentalConfirmationUiState {
         val vehicle = state.vehicle ?: return state
-        
+
         val dailyPrice = vehicle.pricePerDay
         val hourlyPrice = dailyPrice / 8
         val minutelyPrice = hourlyPrice / 40

@@ -25,7 +25,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ActiveRentalRoute(
-    onNavigateToMain: () -> Unit,
+    // GÜNCELLENDİ: NavHost ile hatasız eşleşmesi için yeni hedefimiz Teslimat Fotoğrafları
+    onNavigateToDeliveryPhotos: (String) -> Unit,
     viewModel: ActiveRentalViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -34,7 +35,8 @@ fun ActiveRentalRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ActiveRentalEffect.NavigateToMain -> onNavigateToMain()
+                // ViewModel'i bozmamak için eski NavigateToMain komutunu yeni rotaya yönlendirdim
+                is ActiveRentalEffect.NavigateToMain -> onNavigateToDeliveryPhotos("rental_12345")
                 is ActiveRentalEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -118,9 +120,9 @@ fun ActiveRentalScreen(
                         .clip(CircleShape)
                         .background(Color.LightGray)
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Text(
                     text = "Geçen süre",
                     color = Color.Gray,
@@ -209,7 +211,7 @@ fun ActiveRentalScreen(
                         Text("Kiralamayı Bitir", fontWeight = FontWeight.Bold)
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
