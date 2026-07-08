@@ -1,15 +1,14 @@
 package com.turkcell.rencarapp.ui.rental.summary
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,23 +16,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun RentalSummaryRoute(
     viewModel: RentalSummaryViewModel = hiltViewModel(),
-    onNavigateToDeliveryPhotos: (String) -> Unit,
+    onNavigateToHome: () -> Unit,
     onShowSnackbar: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(viewModel.effect) {
-        viewModel.effect.collectLatest { effect ->
+        viewModel.effect.collect { effect ->
             when (effect) {
-                is RentalSummaryEffect.NavigateToDeliveryPhotos -> onNavigateToDeliveryPhotos(effect.rentalId)
+                is RentalSummaryEffect.NavigateToHome -> onNavigateToHome()
                 is RentalSummaryEffect.ShowError -> onShowSnackbar(effect.message)
                 is RentalSummaryEffect.ShowToast -> onShowSnackbar(effect.message)
             }
@@ -41,200 +38,219 @@ fun RentalSummaryRoute(
     }
 
     RentalSummaryScreen(
-        state = state,
+        uiState = uiState,
         onIntent = viewModel::onIntent
     )
 }
 
 @Composable
 fun RentalSummaryScreen(
-    state: RentalSummaryUiState,
+    uiState: RentalSummaryUiState,
     onIntent: (RentalSummaryIntent) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (state.isLoading) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    Scaffold(
+        bottomBar = {
+            Button(
+                onClick = { onIntent(RentalSummaryIntent.PayClicked) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E63D8))
+            ) {
+                Text(
+                    text = "Kiralamayı Bitir ve Öde",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        } else {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Yeşil Tik İkonu
+        },
+        containerColor = Color(0xFFF8F9FA)
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Üstteki Koyu Kavisli Alan ve Araç Görseli
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF4CAF50)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(260.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Başarılı",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    color = Color(0xFF152238),
+                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(top = 40.dp)
+                    ) {
+                        Text(
+                            text = "Yolculuk Özeti",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Araç başarıyla teslim edildi",
+                                color = Color.LightGray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(140.dp)
+                        .align(Alignment.BottomCenter)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White)
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🚙 ÖDEME DETAYI", fontSize = 24.sp)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Tamamen API'ye bağlı araç bilgisi
             Text(
-                text = "Yolculuk tamamlandı",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                text = uiState.vehicleName,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = "${state.vehicleName} - ${state.plate}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = uiState.plate,
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp)
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Süre ve Mesafe Kartları
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                MetricCard(title = "Süre", value = state.durationText, modifier = Modifier.weight(1f))
-                MetricCard(title = "Mesafe", value = state.distanceText, modifier = Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Fiyat Kırılımları
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                PriceRow(title = "Kiralama ücreti (${state.durationText})", price = state.rentalFee)
-                PriceRow(title = "Başlangıç ücreti", price = state.startFee)
-                PriceRow(title = "Hizmet bedeli", price = state.serviceFee)
-                PriceRow(title = "İndirim - İLKSÜRÜŞ", price = state.discount, priceColor = Color(0xFF4CAF50))
-
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Toplam",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = state.totalFee,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Ödeme Yöntemi Kartı
+            // Tamamen API'ye bağlı fatura özeti
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF1A1F71)),
-                        contentAlignment = Alignment.Center
+                    Text(
+                        text = "Fatura Detayı",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.Black
+                    )
+
+                    HorizontalDivider(color = Color(0xFFEEEEEE))
+
+                    FeeRow("Kiralama Süresi", uiState.durationText)
+                    FeeRow("Katedilen Mesafe", uiState.distanceText)
+
+                    HorizontalDivider(color = Color(0xFFEEEEEE))
+
+                    FeeRow("Kiralama Ücreti", uiState.rentalFee)
+                    FeeRow("Hizmet Bedeli", uiState.serviceFee)
+
+                    if (uiState.discount.isNotEmpty()) {
+                        FeeRow("İndirim", uiState.discount, isDiscount = true)
+                    }
+
+                    HorizontalDivider(color = Color(0xFFEEEEEE))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = state.cardBrand,
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 8.sp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "**** ${state.cardLast4}",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Toplam Ödenecek",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Color.Black
                         )
                         Text(
-                            text = "Kişisel kart",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = uiState.totalFee,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            color = Color(0xFF1E63D8)
                         )
                     }
-                    Text(
-                        text = "Değiştir",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onIntent(RentalSummaryIntent.ChangeCardClicked) }
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Öde Butonu
-            Button(
-                onClick = { onIntent(RentalSummaryIntent.PayClicked) },
+            // Ödeme Yöntemi Kartı
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${state.totalFee} Öde",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp, 32.dp)
+                            .background(Color(0xFF152238), RoundedCornerShape(6.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(uiState.cardBrand, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(text = "Mastercard •••• ${uiState.cardLast4}", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(text = "Varsayılan Kart", fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+                TextButton(onClick = { onIntent(RentalSummaryIntent.ChangeCardClicked) }) {
+                    Text(text = "Değiştir", color = Color(0xFF1E63D8), fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
 @Composable
-fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-        }
-    }
-}
-
-@Composable
-fun PriceRow(title: String, price: String, priceColor: Color = MaterialTheme.colorScheme.onSurface) {
+fun FeeRow(title: String, amount: String, isDiscount: Boolean = false) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(text = price, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = priceColor)
+        Text(text = title, fontSize = 14.sp, color = Color.Gray)
+        Text(
+            text = amount,
+            fontSize = 14.sp,
+            fontWeight = if (isDiscount) FontWeight.Bold else FontWeight.Medium,
+            color = if (isDiscount) Color(0xFF4CAF50) else Color.Black
+        )
     }
 }

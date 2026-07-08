@@ -17,7 +17,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun RentalConfirmationRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToSummary: (String, String) -> Unit,
+    onNavigateToActiveRental: (String) -> Unit,
     viewModel: RentalConfirmationViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -39,7 +38,7 @@ fun RentalConfirmationRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is RentalConfirmationEffect.NavigateBack -> onNavigateBack()
-                is RentalConfirmationEffect.NavigateToSummary -> onNavigateToSummary(effect.vehicleId, effect.plan)
+                is RentalConfirmationEffect.NavigateToActiveRental -> onNavigateToActiveRental(effect.rentalId)
                 is RentalConfirmationEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -83,9 +82,9 @@ fun RentalConfirmationScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E63D8))
                 ) {
-                    Text("Rezervasyonu Tamamla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Kilidi Aç ve Başla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         },
@@ -125,7 +124,6 @@ fun RentalConfirmationScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Araç Görseli Placeholder
                         Surface(
                             modifier = Modifier.size(80.dp),
                             shape = RoundedCornerShape(12.dp),
@@ -169,71 +167,71 @@ fun RentalConfirmationScreen(
                     }
                 }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Kiralama planı", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(modifier = Modifier.height(12.dp))
+                Text("Kiralama planı", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Plan Seçenekleri
-            Row(modifier = Modifier.fillMaxWidth()) {
-                PlanItem(
-                    title = "Dakikalık",
-                    price = state.minutelyPriceLabel,
-                    isSelected = state.selectedPlan == RentalPlan.MINUTELY,
-                    onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.MINUTELY)) },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                PlanItem(
-                    title = "Saatlik",
-                    price = state.hourlyPriceLabel,
-                    isSelected = state.selectedPlan == RentalPlan.HOURLY,
-                    onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.HOURLY)) },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                PlanItem(
-                    title = "Günlük",
-                    price = state.dailyPriceLabel,
-                    isSelected = state.selectedPlan == RentalPlan.DAILY,
-                    onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.DAILY)) },
-                    modifier = Modifier.weight(1f)
-                )
+                // Plan Seçenekleri
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    PlanItem(
+                        title = "Dakikalık",
+                        price = state.minutelyPriceLabel,
+                        isSelected = state.selectedPlan == RentalPlan.MINUTELY,
+                        onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.MINUTELY)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    PlanItem(
+                        title = "Saatlik",
+                        price = state.hourlyPriceLabel,
+                        isSelected = state.selectedPlan == RentalPlan.HOURLY,
+                        onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.HOURLY)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    PlanItem(
+                        title = "Günlük",
+                        price = state.dailyPriceLabel,
+                        isSelected = state.selectedPlan == RentalPlan.DAILY,
+                        onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.DAILY)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Detaylar
+                PriceDetailItem("Ücretsiz rezervasyon", state.freeReservationTime)
+                PriceDetailItem("Başlangıç ücreti", state.basePrice)
+                PriceDetailItem("Tahmini ücret (${state.estimatedDuration})", state.estimatedPrice, isTotal = true)
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Onay Box
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onIntent(RentalConfirmationIntent.TermsAcceptedChanged(!state.isTermsAccepted)) },
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Checkbox(
+                        checked = state.isTermsAccepted,
+                        onCheckedChange = { onIntent(RentalConfirmationIntent.TermsAcceptedChanged(it)) },
+                        colors = CheckboxDefaults.colors(checkedColor = Color(0xFF1E63D8))
+                    )
+                    Text(
+                        text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Detaylar
-            PriceDetailItem("Ücretsiz rezervasyon", state.freeReservationTime)
-            PriceDetailItem("Başlangıç ücreti", state.basePrice)
-            PriceDetailItem("Tahmini ücret (${state.estimatedDuration})", state.estimatedPrice, isTotal = true)
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Onay Box
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onIntent(RentalConfirmationIntent.TermsAcceptedChanged(!state.isTermsAccepted)) },
-                verticalAlignment = Alignment.Top
-            ) {
-                Checkbox(
-                    checked = state.isTermsAccepted,
-                    onCheckedChange = { onIntent(RentalConfirmationIntent.TermsAcceptedChanged(it)) },
-                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF1565C0))
-                )
-                Text(
-                    text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
-                    fontSize = 14.sp,
-                    color = Color.DarkGray,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
 }
 
 @Composable
@@ -249,7 +247,7 @@ fun PlanItem(
             .height(80.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, if (isSelected) Color(0xFF1565C0) else Color(0xFFE0E0E0)),
+        border = BorderStroke(1.dp, if (isSelected) Color(0xFF1E63D8) else Color(0xFFE0E0E0)),
         color = if (isSelected) Color(0xFFE3F2FD) else Color.White
     ) {
         Column(
@@ -261,12 +259,12 @@ fun PlanItem(
                 text = title,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 fontSize = 13.sp,
-                color = if (isSelected) Color(0xFF1565C0) else Color.Black
+                color = if (isSelected) Color(0xFF1E63D8) else Color.Black
             )
             Text(
                 text = price,
                 fontSize = 12.sp,
-                color = if (isSelected) Color(0xFF1565C0) else Color.Gray,
+                color = if (isSelected) Color(0xFF1E63D8) else Color.Gray,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
         }
@@ -283,15 +281,15 @@ fun PriceDetailItem(label: String, value: String, isTotal: Boolean = false) {
     ) {
         Text(
             text = label,
-            color = if (isTotal) Color.Gray else Color.Gray,
+            color = if (isTotal) Color.Black else Color.Gray,
             fontSize = 15.sp,
-            fontWeight = if (isTotal) FontWeight.Normal else FontWeight.Normal
+            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
         )
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
             fontSize = if (isTotal) 16.sp else 15.sp,
-            color = if (isTotal) Color.Black else Color.Black
+            color = Color.Black
         )
     }
 }
