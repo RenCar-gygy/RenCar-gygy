@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.rencarapp.ui.theme.RenCarAppTheme
+import org.maplibre.android.geometry.LatLng
 
 private val RenCarBlue = Color(0xFF2563EB)
 private val EconomicOrange = Color(0xFFF97316)
@@ -167,6 +168,23 @@ fun MapScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = mapColors(isSystemInDarkTheme())
+    val userLocationState = rememberMapUserLocation()
+    val myLocation = remember(state.userLatitude, state.userLongitude, userLocationState.location) {
+        state.userLatitude?.let { lat ->
+            state.userLongitude?.let { lng -> LatLng(lat, lng) }
+        } ?: userLocationState.location
+    }
+
+    LaunchedEffect(userLocationState.location) {
+        userLocationState.location?.let { location ->
+            onIntent(
+                MapIntent.UserLocationUpdated(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                ),
+            )
+        }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -174,6 +192,9 @@ fun MapScreen(
         MapLibreMapView(
             pins = state.visiblePins,
             onPinClick = { onIntent(MapIntent.VehiclePinClicked(it)) },
+            myLocation = myLocation,
+            focusMyLocation = state.shouldFocusMyLocation,
+            onMyLocationFocused = { onIntent(MapIntent.MyLocationFocusHandled) },
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -197,7 +218,47 @@ fun MapScreen(
                 .shadow(8.dp, RoundedCornerShape(24.dp))
                 .clip(RoundedCornerShape(24.dp))
                 .background(colors.fabBackground)
-                .clickable { onIntent(MapIntent.MyLocationClicked) },
+                .clickable {
+                    if (!userLocationState.hasPermission) {
+                        userLocationState.requestPermission()
+                    } else {
+                        val cachedLocation = myLocation ?: userLocationState.location
+                        if (cachedLocation != null) {
+                            onIntent(
+                                MapIntent.UserLocationUpdated(
+                                    latitude = cachedLocation.latitude,
+                                    longitude = cachedLocation.longitude,
+                                ),
+                            )
+                            onIntent(MapIntent.MyLocationClicked)
+                            userLocationState.refreshAndGetLocation { refreshed ->
+                                if (
+                                    refreshed != null &&
+                                    !sameCoordinates(refreshed, cachedLocation)
+                                ) {
+                                    onIntent(
+                                        MapIntent.UserLocationUpdated(
+                                            latitude = refreshed.latitude,
+                                            longitude = refreshed.longitude,
+                                        ),
+                                    )
+                                }
+                            }
+                        } else {
+                            userLocationState.refreshAndGetLocation { location ->
+                                if (location != null) {
+                                    onIntent(
+                                        MapIntent.UserLocationUpdated(
+                                            latitude = location.latitude,
+                                            longitude = location.longitude,
+                                        ),
+                                    )
+                                }
+                                onIntent(MapIntent.MyLocationClicked)
+                            }
+                        }
+                    }
+                },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -216,6 +277,10 @@ fun MapScreen(
         )
     }
 }
+
+private fun sameCoordinates(first: LatLng, second: LatLng): Boolean =
+    kotlin.math.abs(first.latitude - second.latitude) < 0.0001 &&
+        kotlin.math.abs(first.longitude - second.longitude) < 0.0001
 
 @Composable
 private fun MapStubBackground(colors: MapColors) {

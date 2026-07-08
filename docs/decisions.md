@@ -228,6 +228,28 @@
 
 ---
 
+### Sprint 4 — Harita Konum Entegrasyonu (auth-map-api Batch 2)
+
+- Karar: Eğitmen referansı (`HomeScreen`, `RencarMap`, `MapStyle`) mevcut `MapScreen`/`MapLibreMapView` yapısına entegre edildi; ayrı `HomeScreen` oluşturulmadı.
+- Son Güncelleme Tarihi: 08.07.2026
+- `play-services-location` ile FusedLocationProvider; izin isteği ve 5 sn aralıklı konum güncellemesi
+- Kullanıcı konumu MapLibre `GeoJsonSource` + `CircleLayer` (mavi nokta); araç pinleri Compose overlay olarak korundu
+- OSM tile URL'leri `a/b/c.tile.openstreetmap.org` olarak güncellendi
+- Konum FAB: izin yoksa istek; varsa kamerayı kullanıcı konumuna odaklar
+- Debug emülatör: Google varsayılan konumu (Mountain View) algılanırsa Üsküdar test koordinatına normalize edilir; FAB tıklanınca `getCurrentLocation` ile taze okuma yapılır
+
+---
+
+### Sprint 4 — Harita Bölge Etiketi (auth-map-api Batch 3)
+
+- Karar: Alt paneldeki `areaLabel` sabit metin yerine kullanıcı konumuna göre dinamik üretilir.
+- Son Güncelleme Tarihi: 08.07.2026
+- Android `Geocoder` (tr-TR) ile ilçe adı çözülür: öncelik `subAdminArea` (ilçe), ardından şehirden farklı `locality`; mahalle (`subLocality`) ve sokak alanları kullanılmaz
+- En yakın müsait araç pinine haversine mesafesi yürüme hızı (~5 km/s) ile dakikaya çevrilir; format: `{bölge} çevresinde · {dk} dk uzaklıkta`
+- `MapAreaLabelResolver` Hilt ile enjekte edilir; konum veya araç listesi güncellenince `MapViewModel` etiketi yeniler
+
+---
+
 ### Sprint 3 — Kayıt Formu (Batch 5)
 
 - Karar: Stub kayıt (`{phone}@rencar.local`, sabit parola/ad) kaldırıldı; `RegisterScreen` OpenAPI `RegisterDto` alanlarını toplar.
@@ -235,3 +257,13 @@
 - Alanlar: `fullName`, `email`, `password` (min 6), `phone` (10 hane, `5` ile başlar)
 - Akış: Kayıt Ol → `POST /auth/register` → OTP ekranı (telefon doğrulama)
 - UI: Login/Register ile aynı görsel dil; kaydırılabilir form
+
+---
+
+### Sprint 4 — Oturum Yenileme (auth-map-api Batch 1)
+
+- Karar: Access token süresi dolduğunda `POST /auth/refresh` ile otomatik yenileme yapılır; refresh başarısızsa oturum temizlenir.
+- Son Güncelleme Tarihi: 08.07.2026
+- `AuthorizedRequestExecutor` tüm bearer gerektiren repository çağrılarında 401 sonrası tek retry uygular
+- `getCurrentUser()` artık `/auth/me` hata verdiğinde bayat cache kullanmaz; refresh dener
+- Refresh başarısızsa kullanıcı login ekranına yönlendirilir (Splash `onFailure` akışı)

@@ -1,19 +1,18 @@
 package com.turkcell.rencarapp.data.license
 
+import com.turkcell.rencarapp.data.auth.AuthorizedRequestExecutor
 import com.turkcell.rencarapp.data.network.api.LicenseApi
 import com.turkcell.rencarapp.data.network.dto.LicenseStatusResponseDto
-import com.turkcell.rencarapp.data.session.SessionStore
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class DefaultLicenseRepository @Inject constructor(
     private val licenseApi: LicenseApi,
-    private val sessionStore: SessionStore,
+    private val authorizedRequestExecutor: AuthorizedRequestExecutor,
 ) : LicenseRepository {
 
     override suspend fun getStatus(): Result<LicenseInfo> =
@@ -39,22 +38,8 @@ class DefaultLicenseRepository @Inject constructor(
         }
     }
 
-    private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> {
-        val session = sessionStore.getSession()
-            ?: return Result.failure(IllegalStateException("Oturum bulunamadı."))
-        return apiCall {
-            block(bearer(session.accessToken))
-        }
-    }
-
-    private suspend fun <T> apiCall(block: suspend () -> T): Result<T> =
-        try {
-            Result.success(block())
-        } catch (exception: HttpException) {
-            Result.failure(IllegalStateException(httpErrorMessage(exception)))
-        } catch (exception: Exception) {
-            Result.failure(exception)
-        }
+    private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> =
+        authorizedRequestExecutor.execute(block)
 
     private fun LicenseStatusResponseDto.toDomain(): LicenseInfo =
         LicenseInfo(
@@ -69,17 +54,6 @@ class DefaultLicenseRepository @Inject constructor(
             LicenseStatus.APPROVED.name -> LicenseStatus.APPROVED
             LicenseStatus.REJECTED.name -> LicenseStatus.REJECTED
             else -> LicenseStatus.NOT_SUBMITTED
-        }
-
-    private fun bearer(accessToken: String): String = "Bearer $accessToken"
-
-    private fun httpErrorMessage(exception: HttpException): String =
-        when (exception.code()) {
-            400 -> "Dosya eksik veya geçersiz (jpg/png, maks. 5MB)."
-            401 -> "Kimlik doğrulama başarısız."
-            409 -> "Ehliyet zaten inceleniyor veya hesabınız onaylı."
-            413 -> "Dosya boyutu çok büyük (maksimum 5MB)."
-            else -> "Sunucu hatası (${exception.code()})."
         }
 
     private fun normalizeImageBytes(bytes: ByteArray): ByteArray =

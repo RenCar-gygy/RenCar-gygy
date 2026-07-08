@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.map
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -25,10 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -48,35 +48,20 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.OnMapReadyCallback
 import org.maplibre.android.maps.Style
 import org.maplibre.android.module.http.HttpRequestUtil
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
 import kotlin.math.roundToInt
 
 private const val DEFAULT_ZOOM = 12.0
+private const val USER_LOCATION_ZOOM = 14.0
 private val DEFAULT_CENTER = LatLng(41.0151, 28.9795)
 private val EconomicOrange = Color(0xFFF97316)
 private val ComfortPurple = Color(0xFFA855F7)
 private val SuvYellow = Color(0xFFEAB308)
 private val TealPin = Color(0xFF14B8A6)
-
-private val OSM_STYLE_JSON = """
-{
-  "version": 8,
-  "sources": {
-    "osm": {
-      "type": "raster",
-      "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      "tileSize": 256,
-      "attribution": "(c) OpenStreetMap contributors"
-    }
-  },
-  "layers": [
-    {
-      "id": "osm",
-      "type": "raster",
-      "source": "osm"
-    }
-  ]
-}
-""".trimIndent()
 
 private var httpClientConfigured = false
 
@@ -90,13 +75,20 @@ private data class PinScreenPosition(
 fun MapLibreMapView(
     pins: List<MapVehiclePin>,
     onPinClick: (String) -> Unit,
+    myLocation: LatLng? = null,
+    focusMyLocation: Boolean = false,
+    onMyLocationFocused: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val latestPins by rememberUpdatedState(pins)
     val latestOnPinClick by rememberUpdatedState(onPinClick)
+    val latestMyLocation by rememberUpdatedState(myLocation)
+    val latestFocusMyLocation by rememberUpdatedState(focusMyLocation)
+    val latestOnMyLocationFocused by rememberUpdatedState(onMyLocationFocused)
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
+    var mapStyle by remember { mutableStateOf<Style?>(null) }
     var pinPositions by remember { mutableStateOf<List<PinScreenPosition>>(emptyList()) }
 
     remember {
@@ -131,8 +123,11 @@ fun MapLibreMapView(
 
     fun bindMap(map: MapLibreMap) {
         mapRef = map
-        map.setStyle(Style.Builder().fromJson(OSM_STYLE_JSON)) {
-            moveCameraToPins(map, latestPins)
+        map.setStyle(Style.Builder().fromJson(OSM_STYLE_JSON)) { style ->
+            mapStyle = style
+            setupUserLocationLayer(style)
+            updateUserLocation(style, latestMyLocation)
+            moveCameraToPins(map, latestPins, latestMyLocation)
             refreshPinPositions(map, latestPins)
             map.addOnCameraIdleListener {
                 refreshPinPositions(map, latestPins)
@@ -161,6 +156,7 @@ fun MapLibreMapView(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapRef = null
+            mapStyle = null
             pinPositions = emptyList()
             mapView.onDestroy()
         }
@@ -168,9 +164,29 @@ fun MapLibreMapView(
 
     DisposableEffect(pins, mapRef) {
         val map = mapRef
-        if (map != null && map.style != null) {
-            moveCameraToPins(map, pins)
+        val style = mapStyle
+        if (map != null && style != null) {
+            moveCameraToPins(map, pins, latestMyLocation)
             refreshPinPositions(map, pins)
+        }
+        onDispose { }
+    }
+
+    DisposableEffect(myLocation, mapStyle) {
+        val style = mapStyle
+        if (style != null) {
+            updateUserLocation(style, myLocation)
+        }
+        onDispose { }
+    }
+
+    DisposableEffect(focusMyLocation, myLocation, mapRef) {
+        val map = mapRef
+        if (latestFocusMyLocation && myLocation != null && map != null) {
+            map.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(myLocation, USER_LOCATION_ZOOM),
+            )
+            latestOnMyLocationFocused()
         }
         onDispose { }
     }
@@ -248,11 +264,41 @@ private fun MapPinOverlay(
     }
 }
 
-private fun moveCameraToPins(map: MapLibreMap, pins: List<MapVehiclePin>) {
+private fun setupUserLocationLayer(style: Style) {
+    if (style.getSource(USER_LOCATION_SOURCE_ID) == null) {
+        style.addSource(GeoJsonSource(USER_LOCATION_SOURCE_ID))
+    }
+    if (style.getLayer(USER_LOCATION_LAYER_ID) == null) {
+        style.addLayer(
+            CircleLayer(USER_LOCATION_LAYER_ID, USER_LOCATION_SOURCE_ID).withProperties(
+                PropertyFactory.circleColor(AndroidColor.parseColor("#2563EB")),
+                PropertyFactory.circleRadius(10f),
+                PropertyFactory.circleStrokeWidth(2f),
+                PropertyFactory.circleStrokeColor(AndroidColor.WHITE),
+            ),
+        )
+    }
+}
+
+private fun updateUserLocation(style: Style, myLocation: LatLng?) {
+    val source = style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE_ID) ?: return
+    if (myLocation == null) {
+        source.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+    } else {
+        source.setGeoJson(Point.fromLngLat(myLocation.longitude, myLocation.latitude))
+    }
+}
+
+private fun moveCameraToPins(
+    map: MapLibreMap,
+    pins: List<MapVehiclePin>,
+    myLocation: LatLng?,
+) {
     if (pins.isEmpty()) {
+        val target = myLocation ?: DEFAULT_CENTER
         map.cameraPosition = CameraPosition.Builder()
-            .target(DEFAULT_CENTER)
-            .zoom(DEFAULT_ZOOM)
+            .target(target)
+            .zoom(if (myLocation != null) USER_LOCATION_ZOOM else DEFAULT_ZOOM)
             .build()
         return
     }

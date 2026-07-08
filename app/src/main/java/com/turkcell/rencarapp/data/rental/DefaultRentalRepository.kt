@@ -1,10 +1,9 @@
 package com.turkcell.rencarapp.data.rental
 
+import com.turkcell.rencarapp.data.auth.AuthorizedRequestExecutor
 import com.turkcell.rencarapp.data.network.api.RentalApi
 import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
-import com.turkcell.rencarapp.data.session.SessionStore
-import retrofit2.HttpException
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -13,7 +12,7 @@ import javax.inject.Singleton
 @Singleton
 class DefaultRentalRepository @Inject constructor(
     private val rentalApi: RentalApi,
-    private val sessionStore: SessionStore,
+    private val authorizedRequestExecutor: AuthorizedRequestExecutor,
 ) : RentalRepository {
 
     override suspend fun create(request: CreateRentalRequest): Result<Rental> =
@@ -42,22 +41,8 @@ class DefaultRentalRepository @Inject constructor(
             rentalApi.returnRental(authorization = authorization, id = id).toDomain()
         }
 
-    private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> {
-        val session = sessionStore.getSession()
-            ?: return Result.failure(IllegalStateException("Oturum bulunamadı."))
-        return apiCall {
-            block(bearer(session.accessToken))
-        }
-    }
-
-    private suspend fun <T> apiCall(block: suspend () -> T): Result<T> =
-        try {
-            Result.success(block())
-        } catch (exception: HttpException) {
-            Result.failure(IllegalStateException(httpErrorMessage(exception)))
-        } catch (exception: Exception) {
-            Result.failure(exception)
-        }
+    private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> =
+        authorizedRequestExecutor.execute(block)
 
     private fun RentalResponseDto.toDomain(): Rental =
         Rental(
@@ -76,16 +61,5 @@ class DefaultRentalRepository @Inject constructor(
             RentalStatus.COMPLETED.name -> RentalStatus.COMPLETED
             RentalStatus.CANCELLED.name -> RentalStatus.CANCELLED
             else -> RentalStatus.ACTIVE
-        }
-
-    private fun bearer(accessToken: String): String = "Bearer $accessToken"
-
-    private fun httpErrorMessage(exception: HttpException): String =
-        when (exception.code()) {
-            401 -> "Kimlik doğrulama başarısız."
-            403 -> "Bu işlem için yetkiniz yok."
-            404 -> "Kiralama bulunamadı."
-            409 -> "Zaten aktif bir kiralamanın mevcut. Önce onu bitirmelisin."
-            else -> "Sunucu hatası (${exception.code()})."
         }
 }
