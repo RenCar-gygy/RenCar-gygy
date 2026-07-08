@@ -21,6 +21,7 @@ import kotlin.math.roundToInt
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val areaLabelResolver: MapAreaLabelResolver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -40,7 +41,19 @@ class MapViewModel @Inject constructor(
             }
             is MapIntent.CategorySelected -> selectCategory(intent.category)
             MapIntent.FilterClicked -> Unit
-            MapIntent.MyLocationClicked -> Unit
+            MapIntent.MyLocationClicked -> focusMyLocation()
+            MapIntent.MyLocationFocusHandled -> {
+                _uiState.update { it.copy(shouldFocusMyLocation = false) }
+            }
+            is MapIntent.UserLocationUpdated -> {
+                _uiState.update {
+                    it.copy(
+                        userLatitude = intent.latitude,
+                        userLongitude = intent.longitude,
+                    )
+                }
+                refreshAreaLabel()
+            }
             MapIntent.FindNearestClicked -> findNearest()
             is MapIntent.VehiclePinClicked -> sendEffect(MapEffect.NavigateToVehicleDetail(intent.vehicleId))
         }
@@ -62,6 +75,7 @@ class MapViewModel @Inject constructor(
                             nearbyCount = pins.count { !it.isInUse },
                         )
                     }
+                    refreshAreaLabel()
                 }
                 .onFailure { error ->
                     sendEffect(MapEffect.ShowError(error.message ?: "Araçlar yüklenemedi."))
@@ -75,6 +89,34 @@ class MapViewModel @Inject constructor(
                 selectedCategory = category,
                 visiblePins = filterPins(state.vehiclePins, category),
             )
+        }
+        refreshAreaLabel()
+    }
+
+    private fun focusMyLocation() {
+        val state = _uiState.value
+        if (state.userLatitude == null || state.userLongitude == null) {
+            viewModelScope.launch {
+                sendEffect(MapEffect.ShowError("Konum izni verilmedi veya konum alınamadı."))
+            }
+            return
+        }
+        _uiState.update { it.copy(shouldFocusMyLocation = true) }
+    }
+
+    private fun refreshAreaLabel() {
+        val state = _uiState.value
+        val latitude = state.userLatitude ?: return
+        val longitude = state.userLongitude ?: return
+
+        viewModelScope.launch {
+            val pins = state.visiblePins.ifEmpty { state.vehiclePins }
+            val label = areaLabelResolver.resolve(
+                latitude = latitude,
+                longitude = longitude,
+                vehiclePins = pins,
+            )
+            _uiState.update { it.copy(areaLabel = label) }
         }
     }
 

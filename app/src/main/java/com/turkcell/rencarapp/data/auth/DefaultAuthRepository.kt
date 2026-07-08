@@ -15,6 +15,7 @@ import javax.inject.Singleton
 class DefaultAuthRepository @Inject constructor(
     private val authApi: AuthApi,
     private val sessionStore: SessionStore,
+    private val authorizedRequestExecutor: AuthorizedRequestExecutor,
 ) : AuthRepository {
 
     override suspend fun requestOtp(phone: String): Result<OtpChallenge> {
@@ -79,16 +80,15 @@ class DefaultAuthRepository @Inject constructor(
         }
     }
 
-    override suspend fun getCurrentUser(): Result<User> {
-        val session = sessionStore.getSession()
-            ?: return Result.failure(IllegalStateException("Oturum bulunamadı."))
-        return apiCall {
-            authApi.me(authorization = bearer(session.accessToken)).toDomain()
-        }.fold(
-            onSuccess = { Result.success(it) },
-            onFailure = { Result.success(session.user) },
-        )
-    }
+    override suspend fun getCurrentUser(): Result<User> =
+        authorizedRequestExecutor.execute { authorization ->
+            authApi.me(authorization = authorization).toDomain()
+        }.onSuccess { user ->
+            val session = sessionStore.getSession()
+            if (session != null) {
+                sessionStore.saveSession(session.copy(user = user))
+            }
+        }
 
     private suspend fun <T> apiCall(block: suspend () -> T): Result<T> =
         try {

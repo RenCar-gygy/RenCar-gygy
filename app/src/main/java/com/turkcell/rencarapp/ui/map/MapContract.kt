@@ -18,12 +18,15 @@ data class MapVehiclePin(
 
 data class MapUiState(
     val nearbyCount: Int = 0,
-    val areaLabel: String = "Kadıköy çevresinde · 3 dk uzaklıkta",
+    val areaLabel: String = "Konum alınıyor...",
     val searchQuery: String = "",
     val selectedCategory: VehicleCategory = VehicleCategory.ALL,
     val vehiclePins: List<MapVehiclePin> = emptyList(),
     val visiblePins: List<MapVehiclePin> = emptyList(),
     val isLoading: Boolean = true,
+    val userLatitude: Double? = null,
+    val userLongitude: Double? = null,
+    val shouldFocusMyLocation: Boolean = false,
 )
 
 sealed interface MapIntent {
@@ -31,6 +34,8 @@ sealed interface MapIntent {
     data class CategorySelected(val category: VehicleCategory) : MapIntent
     data object FilterClicked : MapIntent
     data object MyLocationClicked : MapIntent
+    data object MyLocationFocusHandled : MapIntent
+    data class UserLocationUpdated(val latitude: Double, val longitude: Double) : MapIntent
     data object FindNearestClicked : MapIntent
     data class VehiclePinClicked(val vehicleId: String) : MapIntent
 }

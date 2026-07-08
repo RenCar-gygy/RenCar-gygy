@@ -45,6 +45,11 @@ data class AuthResponseDto(
 )
 
 @Serializable
+data class RefreshTokenDto(
+    val refreshToken: String,
+)
+
+@Serializable
 data class LicenseStatusResponseDto(
     val status: String,
     val rejectReason: String? = null,

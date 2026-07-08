@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.maplibre.android.sdk)
+    implementation(libs.play.services.location)
 
     ksp(libs.hilt.compiler)
 
