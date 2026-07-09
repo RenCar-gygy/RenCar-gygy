@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -206,7 +207,7 @@ fun VehicleDetailScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Saatlik ₺${state.vehicle.pricePerDay.toInt()}",
+                            text = VehiclePriceFormatter.hourlyLabel(state.vehicle.pricePerDay),
                             color = Color.Gray,
                             fontSize = 14.sp
                         )

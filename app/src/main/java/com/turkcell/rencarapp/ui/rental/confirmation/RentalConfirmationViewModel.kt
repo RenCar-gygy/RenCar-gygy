@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.rental.CreateRentalRequest
 import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -123,17 +124,13 @@ class RentalConfirmationViewModel @Inject constructor(
         val vehicle = state.vehicle ?: return state
 
         val dailyPrice = vehicle.pricePerDay
-        val hourlyPrice = dailyPrice / 8
-        val minutelyPrice = hourlyPrice / 40
-
-        val minutelyLabel = "₺${String.format("%.2f", minutelyPrice)}/dk"
-        val hourlyLabel = "₺${String.format("%.2f", hourlyPrice)}/sa"
-        val dailyLabel = "₺${String.format("%.2f", dailyPrice)}"
+        val hourlyPrice = VehiclePriceFormatter.hourlyPrice(dailyPrice)
+        val minutelyPrice = VehiclePriceFormatter.minutelyPrice(dailyPrice)
 
         val baseState = state.copy(
-            minutelyPriceLabel = minutelyLabel,
-            hourlyPriceLabel = hourlyLabel,
-            dailyPriceLabel = dailyLabel
+            minutelyPriceLabel = VehiclePriceFormatter.minutelyLabel(dailyPrice),
+            hourlyPriceLabel = VehiclePriceFormatter.hourlyLabel(dailyPrice),
+            dailyPriceLabel = VehiclePriceFormatter.dailyLabel(dailyPrice),
         )
 
         return when (state.selectedPlan) {

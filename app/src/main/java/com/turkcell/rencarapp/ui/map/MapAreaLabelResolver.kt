@@ -21,12 +21,44 @@ class MapAreaLabelResolver @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
+    data class SearchAreaMatch(
+        val latitude: Double,
+        val longitude: Double,
+        val areaName: String,
+    )
+
+    suspend fun resolveSearchArea(query: String): SearchAreaMatch? = withContext(Dispatchers.IO) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank() || !Geocoder.isPresent()) return@withContext null
+
+        val geocoder = Geocoder(context, Locale.forLanguageTag("tr-TR"))
+        val candidates = listOf(
+            "$trimmed, Türkiye",
+            "$trimmed, İstanbul, Türkiye",
+            trimmed,
+        )
+
+        for (candidate in candidates) {
+            val address = runCatching { forwardGeocode(geocoder, candidate) }.getOrNull()
+                ?: continue
+
+            return@withContext SearchAreaMatch(
+                latitude = address.latitude,
+                longitude = address.longitude,
+                areaName = address.toSearchAreaName() ?: trimmed,
+            )
+        }
+
+        null
+    }
+
     suspend fun resolve(
         latitude: Double,
         longitude: Double,
         vehiclePins: List<MapVehiclePin>,
+        preferredAreaName: String? = null,
     ): String = withContext(Dispatchers.IO) {
-        val areaName = resolveAreaName(latitude, longitude)
+        val areaName = resolveAreaName(latitude, longitude, preferredAreaName)
         val nearestMinutes = nearestWalkingMinutes(
             userLatitude = latitude,
             userLongitude = longitude,
@@ -40,7 +72,15 @@ class MapAreaLabelResolver @Inject constructor(
         }
     }
 
-    private suspend fun resolveAreaName(latitude: Double, longitude: Double): String {
+    private suspend fun resolveAreaName(
+        latitude: Double,
+        longitude: Double,
+        preferredAreaName: String?,
+    ): String {
+        if (!preferredAreaName.isNullOrBlank()) {
+            return "$preferredAreaName çevresinde"
+        }
+
         if (!Geocoder.isPresent()) {
             return FALLBACK_AREA_LABEL
         }
@@ -68,6 +108,46 @@ class MapAreaLabelResolver @Inject constructor(
         }
 
         return province
+    }
+
+    /** Arama sonucu etiketi: mahalle + ilçe mümkünse birlikte döner. */
+    private fun Address.toSearchAreaName(): String? {
+        val district = toDistrictName()
+        val neighborhood = subLocality?.takeIf { it.isNotBlank() }
+
+        return when {
+            neighborhood != null && district != null -> "$neighborhood, $district"
+            neighborhood != null -> neighborhood
+            district != null -> district
+            else -> locality?.takeIf { it.isNotBlank() }
+        }
+    }
+
+    private suspend fun forwardGeocode(geocoder: Geocoder, query: String): Address? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            suspendCancellableCoroutine { continuation ->
+                geocoder.getFromLocationName(
+                    query,
+                    1,
+                    object : Geocoder.GeocodeListener {
+                        override fun onGeocode(addresses: MutableList<Address>) {
+                            if (continuation.isActive) {
+                                continuation.resume(addresses.firstOrNull())
+                            }
+                        }
+
+                        override fun onError(errorMessage: String?) {
+                            if (continuation.isActive) {
+                                continuation.resume(null)
+                            }
+                        }
+                    },
+                )
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            geocoder.getFromLocationName(query, 1)?.firstOrNull()
+        }
     }
 
     private suspend fun reverseGeocode(latitude: Double, longitude: Double): Address? {

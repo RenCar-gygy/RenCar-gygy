@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.rental.Rental
 import com.turkcell.rencarapp.data.rental.RentalRepository
 import com.turkcell.rencarapp.data.vehicle.Vehicle
+import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -112,11 +113,9 @@ class ActiveRentalViewModel @Inject constructor(
                 val durationString = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
 
                 val currentPrice = if (vehicle != null) {
-                    val dailyPrice = vehicle.pricePerDay
-                    val hourlyPrice = dailyPrice / 8
-                    val minutelyRate = hourlyPrice / 40
+                    val minutelyRate = VehiclePriceFormatter.minutelyPrice(vehicle.pricePerDay)
                     val elapsedMinutes = elapsedSeconds / 60.0
-                    val basePrice = 15.0 // Varsayılan başlangıç ücreti
+                    val basePrice = 15.0 // Varsayılan başlangıç ücreti (UI stub)
                     val totalPrice = basePrice + (minutelyRate * elapsedMinutes)
                     String.format(Locale.getDefault(), "₺%.2f", totalPrice)
                 } else {

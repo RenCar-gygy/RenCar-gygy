@@ -173,7 +173,7 @@
 - Karar: `LicenseViewModel` ve `MapViewModel` fake repository'ler ile bağlanır.
 - Son Güncelleme Tarihi: 03.07.2026
 - License: stub fotoğraflarla `upload`; fake repo anında `APPROVED` döner; Devam Et kullanıcıyı `CUSTOMER` yapar
-- Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi `pricePerDay` üzerinden türetilir
+- Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi API `pricePerDay` alanından `VehiclePriceFormatter` ile türetilir (saatlik = `÷24`, günlük plan doğrudan API değeri; `totalPrice = gün × pricePerDay`)
 - Sprint 3'te gerçek fotoğraf seçimi ve MapLibre koordinat eşlemesi eklenecektir
 
 ---
@@ -240,6 +240,18 @@
 
 ---
 
+### Sprint 4 — Harita Konum Davranışı (auth-map-api Batch 4)
+
+- Karar: Eğitmen `RencarMap`/`HomeScreen` notları `MapLibreMapView` ve `MapLocationTracker` üzerine uyarlandı.
+- Son Güncelleme Tarihi: 09.07.2026
+- İlk açılışta yalnızca bir kez kullanıcı konumuna zoom (`LaunchedEffect` + `moveCamera`); logcat'e koordinat/zoom yazılır
+- Konum güncellemelerinde yalnızca mavi nokta (marker) güncellenir; otomatik kamera zoom'u yapılmaz
+- Konum FAB (`shouldFocusMyLocation`) ile manuel zoom korunur
+- Konum izni reddedilirse harita kullanılamaz; `MapPermissionDeniedScreen` gösterilir
+- `Priority.PRIORITY_HIGH_ACCURACY`; güncelleme aralığı 1–2 sn (`setWaitForAccurateLocation(false)`)
+
+---
+
 ### Sprint 4 — Harita Bölge Etiketi (auth-map-api Batch 3)
 
 - Karar: Alt paneldeki `areaLabel` sabit metin yerine kullanıcı konumuna göre dinamik üretilir.
@@ -267,3 +279,12 @@
 - `AuthorizedRequestExecutor` tüm bearer gerektiren repository çağrılarında 401 sonrası tek retry uygular
 - `getCurrentUser()` artık `/auth/me` hata verdiğinde bayat cache kullanmaz; refresh dener
 - Refresh başarısızsa kullanıcı login ekranına yönlendirilir (Splash `onFailure` akışı)
+
+---
+
+### Sprint 4 — Harita Araç Tipi Filtresi
+
+- Karar: Filtre paneline OpenAPI `VehicleType` alt kırılımı eklendi (SEDAN, HATCHBACK, SUV, STATION, MINIVAN); çoklu seçim istemci tarafında uygulanır.
+- Son Güncelleme Tarihi: 09.07.2026
+- Mevcut kategori çipleri (Tümü / Ekonomik / Konfor / SUV) ve “yalnızca müsait” switch'i korunur; tip filtresi bunların üzerine ek istemci filtresi olarak çalışır.
+- API `GET /vehicles` tek `type` query parametresi desteklediği için çoklu tip seçiminde önce kategori kaynağından liste alınır, ardından `selectedVehicleTypes` ile süzülür.
