@@ -1,6 +1,7 @@
 package com.turkcell.rencarapp.ui.map
 
 import android.graphics.Color as AndroidColor
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -18,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +57,7 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import kotlin.math.roundToInt
 
+private const val TAG = "MapLibreMapView"
 private const val DEFAULT_ZOOM = 12.0
 private const val USER_LOCATION_ZOOM = 14.0
 private val DEFAULT_CENTER = LatLng(41.0151, 28.9795)
@@ -78,6 +81,11 @@ fun MapLibreMapView(
     myLocation: LatLng? = null,
     focusMyLocation: Boolean = false,
     onMyLocationFocused: () -> Unit = {},
+    focusVisiblePins: Boolean = false,
+    onVisiblePinsFocused: () -> Unit = {},
+    searchFocusLocation: LatLng? = null,
+    focusSearchArea: Boolean = false,
+    onSearchAreaFocused: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -87,9 +95,15 @@ fun MapLibreMapView(
     val latestMyLocation by rememberUpdatedState(myLocation)
     val latestFocusMyLocation by rememberUpdatedState(focusMyLocation)
     val latestOnMyLocationFocused by rememberUpdatedState(onMyLocationFocused)
+    val latestFocusVisiblePins by rememberUpdatedState(focusVisiblePins)
+    val latestOnVisiblePinsFocused by rememberUpdatedState(onVisiblePinsFocused)
+    val latestSearchFocusLocation by rememberUpdatedState(searchFocusLocation)
+    val latestFocusSearchArea by rememberUpdatedState(focusSearchArea)
+    val latestOnSearchAreaFocused by rememberUpdatedState(onSearchAreaFocused)
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
     var pinPositions by remember { mutableStateOf<List<PinScreenPosition>>(emptyList()) }
+    var hasPerformedInitialZoom by remember { mutableStateOf(false) }
 
     remember {
         MapLibre.getInstance(context.applicationContext)
@@ -111,6 +125,8 @@ fun MapLibreMapView(
     val mapView = remember {
         MapView(context).apply {
             onCreate(null)
+            isFocusable = false
+            isFocusableInTouchMode = false
         }
     }
 
@@ -127,7 +143,10 @@ fun MapLibreMapView(
             mapStyle = style
             setupUserLocationLayer(style)
             updateUserLocation(style, latestMyLocation)
-            moveCameraToPins(map, latestPins, latestMyLocation)
+            map.cameraPosition = CameraPosition.Builder()
+                .target(DEFAULT_CENTER)
+                .zoom(DEFAULT_ZOOM)
+                .build()
             refreshPinPositions(map, latestPins)
             map.addOnCameraIdleListener {
                 refreshPinPositions(map, latestPins)
@@ -158,15 +177,29 @@ fun MapLibreMapView(
             mapRef = null
             mapStyle = null
             pinPositions = emptyList()
+            hasPerformedInitialZoom = false
             mapView.onDestroy()
         }
     }
 
+    LaunchedEffect(mapRef, mapStyle, myLocation) {
+        val map = mapRef ?: return@LaunchedEffect
+        val location = myLocation ?: return@LaunchedEffect
+        if (hasPerformedInitialZoom) return@LaunchedEffect
+
+        map.moveCamera(
+            CameraUpdateFactory.newLatLngZoom(location, USER_LOCATION_ZOOM),
+        )
+        Log.d(
+            TAG,
+            "İlk zoom — lat=${location.latitude}, lng=${location.longitude}, zoom=$USER_LOCATION_ZOOM",
+        )
+        hasPerformedInitialZoom = true
+    }
+
     DisposableEffect(pins, mapRef) {
         val map = mapRef
-        val style = mapStyle
-        if (map != null && style != null) {
-            moveCameraToPins(map, pins, latestMyLocation)
+        if (map != null) {
             refreshPinPositions(map, pins)
         }
         onDispose { }
@@ -191,10 +224,35 @@ fun MapLibreMapView(
         onDispose { }
     }
 
+    DisposableEffect(focusVisiblePins, pins, mapRef) {
+        val map = mapRef
+        if (latestFocusVisiblePins && pins.isNotEmpty() && map != null) {
+            focusCameraOnPins(map, pins)
+            latestOnVisiblePinsFocused()
+        }
+        onDispose { }
+    }
+
+    DisposableEffect(focusSearchArea, searchFocusLocation, mapRef) {
+        val map = mapRef
+        val location = searchFocusLocation
+        if (latestFocusSearchArea && location != null && map != null) {
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(location, SEARCH_AREA_ZOOM),
+            )
+            latestOnSearchAreaFocused()
+        }
+        onDispose { }
+    }
+
     Box(modifier = modifier) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { mapView },
+            update = { view ->
+                view.isFocusable = false
+                view.isFocusableInTouchMode = false
+            },
         )
 
         pinPositions.forEach { position ->
@@ -289,19 +347,8 @@ private fun updateUserLocation(style: Style, myLocation: LatLng?) {
     }
 }
 
-private fun moveCameraToPins(
-    map: MapLibreMap,
-    pins: List<MapVehiclePin>,
-    myLocation: LatLng?,
-) {
-    if (pins.isEmpty()) {
-        val target = myLocation ?: DEFAULT_CENTER
-        map.cameraPosition = CameraPosition.Builder()
-            .target(target)
-            .zoom(if (myLocation != null) USER_LOCATION_ZOOM else DEFAULT_ZOOM)
-            .build()
-        return
-    }
+private fun focusCameraOnPins(map: MapLibreMap, pins: List<MapVehiclePin>) {
+    if (pins.isEmpty()) return
 
     if (pins.size == 1) {
         val pin = pins.first()
@@ -309,7 +356,7 @@ private fun moveCameraToPins(
             CameraUpdateFactory.newCameraPosition(
                 CameraPosition.Builder()
                     .target(LatLng(pin.latitude, pin.longitude))
-                    .zoom(14.0)
+                    .zoom(PIN_FOCUS_ZOOM)
                     .build(),
             ),
         )
@@ -320,12 +367,17 @@ private fun moveCameraToPins(
     pins.forEach { pin ->
         boundsBuilder.include(LatLng(pin.latitude, pin.longitude))
     }
+
     try {
-        map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+        map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), PIN_BOUNDS_PADDING_PX))
     } catch (_: Exception) {
         val first = pins.first()
         map.animateCamera(
-            CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), 14.0),
+            CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), PIN_FOCUS_ZOOM),
         )
     }
 }
+
+private const val PIN_FOCUS_ZOOM = 13.0
+private const val SEARCH_AREA_ZOOM = 13.0
+private const val PIN_BOUNDS_PADDING_PX = 120
