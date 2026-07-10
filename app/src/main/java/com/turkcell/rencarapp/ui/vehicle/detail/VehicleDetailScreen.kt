@@ -202,7 +202,7 @@ fun VehicleDetailScreen(
                 ) {
                     Column {
                         Text(
-                            text = "₺4,50 /dk",
+                            text = VehiclePriceFormatter.minutelyLabel(state.vehicle.pricePerDay),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -217,31 +217,15 @@ fun VehicleDetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Aksiyon Butonları
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = { onIntent(VehicleDetailIntent.ReserveClicked) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Rezerve Et")
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Button(
-                        onClick = { onIntent(VehicleDetailIntent.UnlockClicked) },
-                        modifier = Modifier
-                            .weight(1.2f)
-                            .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-                    ) {
-                        Icon(Icons.Default.LockOpen, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Kilidi Aç")
-                    }
+                Button(
+                    onClick = { onIntent(VehicleDetailIntent.ReserveClicked) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                ) {
+                    Text("Rezerve Et", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }

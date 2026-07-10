@@ -48,9 +48,7 @@ class VehicleDetailViewModel @Inject constructor(
                 }
             }
             is VehicleDetailIntent.UnlockClicked -> {
-                viewModelScope.launch {
-                    _effect.send(VehicleDetailEffect.ShowMessage("Kilit açma özelliği şu an aktif değil."))
-                }
+                // UI'dan kaldırıldı, artık işlevsiz.
             }
         }
     }

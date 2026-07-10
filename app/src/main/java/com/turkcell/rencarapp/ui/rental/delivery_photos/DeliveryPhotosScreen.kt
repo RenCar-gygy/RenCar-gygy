@@ -31,8 +31,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun DeliveryPhotosRoute(
     onNavigateBack: () -> Unit,
-    // GÜNCELLENDİ: NavHost ile eşleşmesi için Faturaya (Summary) yönlendiriyoruz
-    onNavigateToSummary: (String) -> Unit,
+    // GÜNCELLENDİ: Fotoğraflar yüklendikten sonra Aktif Kiralamaya (Kilidi Aç) yönlendiriyoruz
+    onNavigateToActiveRental: (String) -> Unit,
     viewModel: DeliveryPhotosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,8 +42,8 @@ fun DeliveryPhotosRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is DeliveryPhotosEffect.NavigateBack -> onNavigateBack()
-                // ViewModel'i bozmamak için eski NavigateToActiveRental komutunu Summary'ye yönlendirdim
-                is DeliveryPhotosEffect.NavigateToActiveRental -> onNavigateToSummary(effect.rentalId)
+                // Artık akış gereği Aktif Kiralamaya yönlendiriyoruz
+                is DeliveryPhotosEffect.NavigateToActiveRental -> onNavigateToActiveRental(effect.rentalId)
                 is DeliveryPhotosEffect.ShowError -> {
                     Toast.makeText(context, "Bir hata oluştu", Toast.LENGTH_SHORT).show()
                 }
@@ -123,8 +123,8 @@ fun DeliveryPhotosScreen(
                     if (state.isStartingRental) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                     } else {
-                        // GÜNCELLENDİ: Metinler "Kiralamayı başlat" yerine fotoğrafların bitişine uyarlandı
-                        val buttonText = if (state.isComplete) "Fotoğrafları Onayla ve Bitir" else "Eksik Fotoğrafları Tamamla"
+                        // GÜNCELLENDİ: Metinler kiralama başlangıcına uyarlandı
+                        val buttonText = if (state.isComplete) "Fotoğrafları Onayla ve Devam Et" else "Eksik Fotoğrafları Tamamla"
                         Text(buttonText, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -144,7 +144,7 @@ fun DeliveryPhotosScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Bitirmeden önce 4 yönü çek",
+                text = "Başlamadan önce 4 yönü çek",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )

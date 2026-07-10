@@ -39,6 +39,7 @@ class ActiveRentalViewModel @Inject constructor(
     val effect = _effect.receiveAsFlow()
 
     private var timerJob: Job? = null
+    private var usageStartTime: Long? = null
 
     init {
         onIntent(ActiveRentalIntent.LoadRental)
@@ -53,7 +54,14 @@ class ActiveRentalViewModel @Inject constructor(
         when (intent) {
             is ActiveRentalIntent.LoadRental -> loadRental()
             is ActiveRentalIntent.ToggleLock -> {
+                val currentlyLocked = _uiState.value.isLocked
+                if (currentlyLocked && usageStartTime == null) {
+                    // İlk kez kilit açılıyor -> Kullanım başlar
+                    usageStartTime = System.currentTimeMillis() / 1000
+                }
+                
                 _uiState.update { it.copy(isLocked = !it.isLocked) }
+
                 viewModelScope.launch {
                     val msg = if (_uiState.value.isLocked) "Araç kilitlendi" else "Araç kilidi açıldı"
                     _effect.send(ActiveRentalEffect.ShowMessage(msg))
@@ -101,25 +109,48 @@ class ActiveRentalViewModel @Inject constructor(
     private fun startTimer(rental: Rental, vehicle: Vehicle?) {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            val startSeconds = rental.startDate.epochSecond
+            val reservationStartSeconds = rental.startDate.epochSecond
+            val reservationLimitSeconds = reservationStartSeconds + (15 * 60) // 15 dk ücretsiz
+
             while (true) {
                 val nowSeconds = System.currentTimeMillis() / 1000
-                val elapsedSeconds = nowSeconds - startSeconds
+                val startOfUsage = usageStartTime
                 
-                val seconds = elapsedSeconds % 60
-                val minutes = (elapsedSeconds / 60) % 60
-                val hours = (elapsedSeconds / 3600)
-                
-                val durationString = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+                val durationString: String
+                val currentPrice: String
 
-                val currentPrice = if (vehicle != null) {
-                    val minutelyRate = VehiclePriceFormatter.minutelyPrice(vehicle.pricePerDay)
-                    val elapsedMinutes = elapsedSeconds / 60.0
-                    val basePrice = 15.0 // Varsayılan başlangıç ücreti (UI stub)
-                    val totalPrice = basePrice + (minutelyRate * elapsedMinutes)
-                    String.format(Locale.getDefault(), "₺%.2f", totalPrice)
+                if (startOfUsage == null) {
+                    // REZERVASYON MODU (Geri Sayım)
+                    val remainingSeconds = reservationLimitSeconds - nowSeconds
+                    val absSeconds = kotlin.math.abs(remainingSeconds)
+                    
+                    val seconds = absSeconds % 60
+                    val minutes = (absSeconds / 60) % 60
+                    val hours = absSeconds / 3600
+                    
+                    val sign = if (remainingSeconds < 0) "-" else ""
+                    // Rezervasyon süresini 00:15:00 formatında gösteriyoruz
+                    durationString = String.format(Locale.getDefault(), "%s%02d:%02d:%02d", sign, hours, minutes, seconds)
+                    currentPrice = "₺0,00"
                 } else {
-                    _uiState.value.currentPrice
+                    // KULLANIM MODU (İleri Sayım)
+                    val elapsedSeconds = nowSeconds - startOfUsage
+                    val seconds = elapsedSeconds % 60
+                    val minutes = (elapsedSeconds / 60) % 60
+                    val hours = elapsedSeconds / 3600
+                    
+                    durationString = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+
+                    val basePrice = 15.0 // Açılış ücreti
+                    currentPrice = if (vehicle != null) {
+                        val minutelyRate = VehiclePriceFormatter.minutelyPrice(vehicle.pricePerDay)
+                        val elapsedMinutes = elapsedSeconds / 60.0
+                        val totalPrice = basePrice + (minutelyRate * elapsedMinutes)
+                        String.format(Locale.getDefault(), "₺%.2f", totalPrice)
+                    } else {
+                        // Araç bilgisi henüz gelmediyse bile başlangıç ücretini göster
+                        String.format(Locale.getDefault(), "₺%.2f", basePrice)
+                    }
                 }
 
                 _uiState.update { 
@@ -139,7 +170,7 @@ class ActiveRentalViewModel @Inject constructor(
             rentalRepository.returnRental(rentalId)
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false) }
-                    _effect.send(ActiveRentalEffect.NavigateToMain)
+                    _effect.send(ActiveRentalEffect.NavigateToSummary(rentalId))
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
