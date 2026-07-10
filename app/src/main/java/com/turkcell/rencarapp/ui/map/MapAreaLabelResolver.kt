@@ -57,8 +57,14 @@ class MapAreaLabelResolver @Inject constructor(
         longitude: Double,
         vehiclePins: List<MapVehiclePin>,
         preferredAreaName: String? = null,
+        locationPrecision: MapLocationPrecision = MapLocationPrecision.APPROXIMATE,
     ): String = withContext(Dispatchers.IO) {
-        val areaName = resolveAreaName(latitude, longitude, preferredAreaName)
+        val areaName = resolveAreaName(
+            latitude = latitude,
+            longitude = longitude,
+            preferredAreaName = preferredAreaName,
+            locationPrecision = locationPrecision,
+        )
         val nearestMinutes = nearestWalkingMinutes(
             userLatitude = latitude,
             userLongitude = longitude,
@@ -76,6 +82,7 @@ class MapAreaLabelResolver @Inject constructor(
         latitude: Double,
         longitude: Double,
         preferredAreaName: String?,
+        locationPrecision: MapLocationPrecision,
     ): String {
         if (!preferredAreaName.isNullOrBlank()) {
             return "$preferredAreaName çevresinde"
@@ -86,9 +93,26 @@ class MapAreaLabelResolver @Inject constructor(
         }
 
         val address = runCatching { reverseGeocode(latitude, longitude) }.getOrNull()
-        val districtName = address?.toDistrictName()
+            ?: return FALLBACK_AREA_LABEL
 
-        return districtName?.let { "$it çevresinde" } ?: FALLBACK_AREA_LABEL
+        val areaLabel = when (locationPrecision) {
+            MapLocationPrecision.PRECISE -> address.toPreciseAreaName()
+            MapLocationPrecision.APPROXIMATE -> address.toDistrictName()
+        }
+
+        return areaLabel?.let { "$it çevresinde" } ?: FALLBACK_AREA_LABEL
+    }
+
+    /** Tam konum: mahalle + ilçe mümkünse birlikte. */
+    private fun Address.toPreciseAreaName(): String? {
+        val district = toDistrictName()
+        val neighborhood = subLocality?.takeIf { it.isNotBlank() }
+
+        return when {
+            neighborhood != null && district != null -> "$neighborhood, $district"
+            neighborhood != null -> neighborhood
+            else -> district
+        }
     }
 
     /**

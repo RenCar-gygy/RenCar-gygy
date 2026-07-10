@@ -208,12 +208,13 @@ fun MapScreen(
         }
     }
 
-    LaunchedEffect(userLocationState.location) {
+    LaunchedEffect(userLocationState.location, userLocationState.isPreciseLocation) {
         userLocationState.location?.let { location ->
             onIntent(
                 MapIntent.UserLocationUpdated(
                     latitude = location.latitude,
                     longitude = location.longitude,
+                    isPreciseLocation = userLocationState.isPreciseLocation,
                 ),
             )
         }
@@ -285,6 +286,7 @@ fun MapScreen(
                                 MapIntent.UserLocationUpdated(
                                     latitude = cachedLocation.latitude,
                                     longitude = cachedLocation.longitude,
+                                    isPreciseLocation = userLocationState.isPreciseLocation,
                                 ),
                             )
                             userLocationState.refreshAndGetLocation { refreshed ->
@@ -296,6 +298,7 @@ fun MapScreen(
                                         MapIntent.UserLocationUpdated(
                                             latitude = refreshed.latitude,
                                             longitude = refreshed.longitude,
+                                            isPreciseLocation = userLocationState.isPreciseLocation,
                                         ),
                                     )
                                 }
@@ -308,6 +311,7 @@ fun MapScreen(
                                         MapIntent.UserLocationUpdated(
                                             latitude = location.latitude,
                                             longitude = location.longitude,
+                                            isPreciseLocation = userLocationState.isPreciseLocation,
                                         ),
                                     )
                                 }
@@ -741,7 +745,6 @@ private fun MapBottomSheet(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -756,21 +759,6 @@ private fun MapBottomSheet(
                     text = state.areaLabel,
                     color = colors.sheetSubtitle,
                     fontSize = 13.sp,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.chipInactiveBackground)
-                    .clickable { onIntent(MapIntent.FilterClicked) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = "Filtre",
-                    tint = colors.sheetSubtitle,
-                    modifier = Modifier.size(20.dp),
                 )
             }
         }
