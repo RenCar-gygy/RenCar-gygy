@@ -43,6 +43,7 @@ private val USKUDAR_TEST_LOCATION = LatLng(41.0257, 29.0151)
 data class MapUserLocationState(
     val location: LatLng? = null,
     val hasPermission: Boolean = false,
+    val isPreciseLocation: Boolean = false,
     val isPermissionDenied: Boolean = false,
     val shouldOpenSettings: Boolean = false,
     val requestPermission: () -> Unit = {},
@@ -61,6 +62,9 @@ fun rememberMapUserLocation(requestOnLaunch: Boolean = true): MapUserLocationSta
     var hasPermission by remember {
         mutableStateOf(hasLocationPermission(context))
     }
+    var isPreciseLocation by remember {
+        mutableStateOf(hasFineLocationPermission(context))
+    }
     var isPermissionDenied by remember { mutableStateOf(false) }
     var permissionRequested by remember { mutableStateOf(false) }
     var shouldOpenSettings by remember { mutableStateOf(false) }
@@ -68,6 +72,7 @@ fun rememberMapUserLocation(requestOnLaunch: Boolean = true): MapUserLocationSta
     fun syncPermissionState() {
         val granted = hasLocationPermission(context)
         hasPermission = granted
+        isPreciseLocation = hasFineLocationPermission(context)
         if (granted) {
             isPermissionDenied = false
             shouldOpenSettings = false
@@ -84,6 +89,7 @@ fun rememberMapUserLocation(requestOnLaunch: Boolean = true): MapUserLocationSta
         val granted = result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         hasPermission = granted
+        isPreciseLocation = result[Manifest.permission.ACCESS_FINE_LOCATION] == true
         isPermissionDenied = !granted
         shouldOpenSettings = !granted && isPermanentlyDenied(activity, permissionRequested = true)
     }
@@ -171,6 +177,7 @@ fun rememberMapUserLocation(requestOnLaunch: Boolean = true): MapUserLocationSta
     return MapUserLocationState(
         location = location,
         hasPermission = hasPermission,
+        isPreciseLocation = isPreciseLocation,
         isPermissionDenied = isPermissionDenied,
         shouldOpenSettings = shouldOpenSettings,
         requestPermission = requestPermission,
@@ -189,9 +196,12 @@ private fun isPermanentlyDenied(activity: Activity?, permissionRequested: Boolea
 }
 
 private fun hasLocationPermission(context: Context): Boolean =
-    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-        PackageManager.PERMISSION_GRANTED ||
+    hasFineLocationPermission(context) ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+        PackageManager.PERMISSION_GRANTED
+
+private fun hasFineLocationPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
         PackageManager.PERMISSION_GRANTED
 
 @SuppressLint("MissingPermission")

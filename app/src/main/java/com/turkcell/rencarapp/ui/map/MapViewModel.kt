@@ -74,6 +74,11 @@ class MapViewModel @Inject constructor(
                     it.copy(
                         userLatitude = intent.latitude,
                         userLongitude = intent.longitude,
+                        locationPrecision = if (intent.isPreciseLocation) {
+                            MapLocationPrecision.PRECISE
+                        } else {
+                            MapLocationPrecision.APPROXIMATE
+                        },
                     )
                 }
                 refreshAreaLabel()
@@ -246,6 +251,7 @@ class MapViewModel @Inject constructor(
                 longitude = reference.longitude,
                 vehiclePins = pins,
                 preferredAreaName = reference.preferredAreaName,
+                locationPrecision = state.locationPrecision,
             )
             _uiState.update { it.copy(areaLabel = label) }
         }

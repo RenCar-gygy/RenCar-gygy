@@ -9,6 +9,12 @@ enum class VehicleCategory {
     SUV,
 }
 
+/** Konum izni: tam (precise) veya yaklaşık (approximate). */
+enum class MapLocationPrecision {
+    PRECISE,
+    APPROXIMATE,
+}
+
 data class MapVehiclePin(
     val id: String,
     val priceLabel: String,
@@ -41,6 +47,7 @@ data class MapUiState(
     val isLoading: Boolean = true,
     val userLatitude: Double? = null,
     val userLongitude: Double? = null,
+    val locationPrecision: MapLocationPrecision = MapLocationPrecision.APPROXIMATE,
     val shouldFocusMyLocation: Boolean = false,
     val shouldFocusVisiblePins: Boolean = false,
     val shouldFocusSearchArea: Boolean = false,
@@ -58,7 +65,11 @@ sealed interface MapIntent {
     data object MyLocationFocusHandled : MapIntent
     data object VisiblePinsFocusHandled : MapIntent
     data object SearchAreaFocusHandled : MapIntent
-    data class UserLocationUpdated(val latitude: Double, val longitude: Double) : MapIntent
+    data class UserLocationUpdated(
+        val latitude: Double,
+        val longitude: Double,
+        val isPreciseLocation: Boolean,
+    ) : MapIntent
     data object FindNearestClicked : MapIntent
     data class VehiclePinClicked(val vehicleId: String) : MapIntent
 }
