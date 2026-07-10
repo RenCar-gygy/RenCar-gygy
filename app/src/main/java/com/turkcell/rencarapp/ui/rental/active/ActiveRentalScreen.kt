@@ -25,8 +25,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ActiveRentalRoute(
-    // GÜNCELLENDİ: NavHost ile hatasız eşleşmesi için yeni hedefimiz Teslimat Fotoğrafları
-    onNavigateToDeliveryPhotos: (String) -> Unit,
+    // GÜNCELLENDİ: NavHost ile hatasız eşleşmesi için yeni hedefimiz Fatura (Summary) ekranı
+    onNavigateToSummary: (String) -> Unit,
     viewModel: ActiveRentalViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -35,8 +35,8 @@ fun ActiveRentalRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                // ViewModel'i bozmamak için eski NavigateToMain komutunu yeni rotaya yönlendirdim
-                is ActiveRentalEffect.NavigateToMain -> onNavigateToDeliveryPhotos("rental_12345")
+                // ViewModel'den gelen kiralama bitiş sinyalini Summary'ye yönlendiriyoruz
+                is ActiveRentalEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
                 is ActiveRentalEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }

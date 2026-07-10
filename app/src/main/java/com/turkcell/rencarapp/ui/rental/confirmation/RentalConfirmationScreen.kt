@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 @Composable
 fun RentalConfirmationRoute(
     onNavigateBack: () -> Unit,
@@ -84,7 +83,7 @@ fun RentalConfirmationScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E63D8))
                 ) {
-                    Text("Kilidi Aç ve Başla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Rezervasyonu Tamamla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         },
