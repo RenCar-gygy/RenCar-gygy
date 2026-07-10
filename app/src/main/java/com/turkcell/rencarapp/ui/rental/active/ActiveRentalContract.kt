@@ -18,6 +18,6 @@ sealed interface ActiveRentalIntent {
 }
 
 sealed interface ActiveRentalEffect {
-    data object NavigateToMain : ActiveRentalEffect
+    data class NavigateToSummary(val rentalId: String) : ActiveRentalEffect
     data class ShowMessage(val message: String) : ActiveRentalEffect
 }

@@ -25,8 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ActiveRentalRoute(
-    // GÜNCELLENDİ: NavHost ile hatasız eşleşmesi için yeni hedefimiz Teslimat Fotoğrafları
-    onNavigateToDeliveryPhotos: (String) -> Unit,
+    onNavigateToSummary: (String) -> Unit,
     viewModel: ActiveRentalViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -35,8 +34,7 @@ fun ActiveRentalRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                // ViewModel'i bozmamak için eski NavigateToMain komutunu yeni rotaya yönlendirdim
-                is ActiveRentalEffect.NavigateToMain -> onNavigateToDeliveryPhotos("rental_12345")
+                is ActiveRentalEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
                 is ActiveRentalEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -64,12 +62,25 @@ fun ActiveRentalScreen(
     state: ActiveRentalUiState,
     onIntent: (ActiveRentalIntent) -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE3F2FD)) // Light blue background to represent map
-    ) {
-        // Map Top Status Bar
+    // Box, içindeki bileşenleri üst üste (katman katman) koyar.
+    // İlk yazılan en altta, son yazılan en üstte görünür.
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // --- 1. CANLI HARİTA (MAPLIBRE) BURAYA GELECEK ---
+        // Kırmızı hata veren resmi sildik. Kendi MapLibre harita bileşenini
+        // tam buraya yerleştir. modifier = Modifier.fillMaxSize() vermeyi unutma
+        // ki harita tüm ekranı kaplasın.
+
+        /* ÖRNEK:
+        MapLibreMap(modifier = Modifier.fillMaxSize()) {
+            // Harita ayarlarınız...
+        }
+        */
+
+        // Geçici arka plan (haritayı ekleyene kadar arkası boş kalmasın diye açık mavi)
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE3F2FD)))
+
+        // --- 2. ÜST BİLGİ BARI ---
         Surface(
             modifier = Modifier
                 .padding(top = 48.dp)
@@ -85,11 +96,11 @@ fun ActiveRentalScreen(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF4CAF50))
+                        .background(if (state.isLocked) Color(0xFFFFA000) else Color(0xFF4CAF50))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Kiralama aktif - ${state.vehicleName}",
+                    text = if (state.isLocked) "Rezervasyon Aktif" else "Kiralama Aktif - ${state.vehicleName}",
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -97,22 +108,22 @@ fun ActiveRentalScreen(
             }
         }
 
-        // Active Rental Info Card
+        // --- 3. ALT BİLGİ VE KONTROL KARTI (SAYAÇ VE FİYAT) ---
         Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(bottom = 0.dp),
+                .fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .padding(bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Handle bar
+                // Sürükleme Çubuğu (Handle)
                 Box(
                     modifier = Modifier
                         .width(40.dp)
@@ -124,21 +135,24 @@ fun ActiveRentalScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Geçen süre",
+                    text = if (state.isLocked) "Kalan Rezervasyon Süresi" else "Geçen Kullanım Süresi",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
+
+                // SAYACIN GÖRÜNDÜĞÜ YER
                 Text(
                     text = state.duration,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
+                    letterSpacing = 2.sp,
+                    color = if (state.isLocked) Color.DarkGray else Color(0xFF1565C0)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    // Current Price Card
+                    // Fiyat Kartı
                     Surface(
                         modifier = Modifier.weight(1f),
                         color = Color(0xFFF5F5F5),
@@ -160,7 +174,7 @@ fun ActiveRentalScreen(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Distance Card
+                    // Mesafe Kartı
                     Surface(
                         modifier = Modifier.weight(1f),
                         color = Color(0xFFF5F5F5),
@@ -183,6 +197,7 @@ fun ActiveRentalScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
+                    // Kilit Butonu
                     OutlinedButton(
                         onClick = { onIntent(ActiveRentalIntent.ToggleLock) },
                         modifier = Modifier
@@ -192,27 +207,31 @@ fun ActiveRentalScreen(
                     ) {
                         Icon(
                             if (state.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                            contentDescription = null
+                            contentDescription = null,
+                            tint = if (state.isLocked) Color(0xFF4CAF50) else Color.DarkGray
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (state.isLocked) "Kilidi Aç" else "Kilitle")
+                        Text(
+                            text = if (state.isLocked) "Kilidi Aç" else "Kilitle",
+                            color = if (state.isLocked) Color(0xFF4CAF50) else Color.DarkGray
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
+                    // Kiralamayı Bitir Butonu
                     Button(
                         onClick = { onIntent(ActiveRentalIntent.FinishRental) },
                         modifier = Modifier
                             .weight(1.2f)
                             .height(56.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                        enabled = !state.isLocked
                     ) {
                         Text("Kiralamayı Bitir", fontWeight = FontWeight.Bold)
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
