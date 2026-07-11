@@ -94,6 +94,7 @@ class ActiveRentalViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             vehicleName = "${vehicle.brand} ${vehicle.model}",
+                            vehiclePlate = vehicle.plate,
                             isLoading = false
                         )
                     }
@@ -179,12 +180,24 @@ class ActiveRentalViewModel @Inject constructor(
             rentalRepository.returnRental(rentalId)
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false) }
-                    _effect.send(ActiveRentalEffect.NavigateToSummary(rentalId))
+                    _effect.send(
+                        ActiveRentalEffect.NavigateToDeliveryPhotos(
+                            rentalId = rentalId,
+                            vehicleName = _uiState.value.vehicleName,
+                            vehiclePlate = _uiState.value.vehiclePlate
+                        )
+                    )
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
-                    // Hata verse bile sunum/demo için summary sayfasına zorla geçirelim
-                    _effect.send(ActiveRentalEffect.NavigateToSummary(rentalId))
+                    // Hata verse bile sunum/demo için fotoğraflar sayfasına zorla geçirelim
+                    _effect.send(
+                        ActiveRentalEffect.NavigateToDeliveryPhotos(
+                            rentalId = rentalId,
+                            vehicleName = _uiState.value.vehicleName,
+                            vehiclePlate = _uiState.value.vehiclePlate
+                        )
+                    )
                 }
         }
     }

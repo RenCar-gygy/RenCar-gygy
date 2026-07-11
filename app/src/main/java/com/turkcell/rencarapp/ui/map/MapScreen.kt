@@ -96,60 +96,39 @@ private data class MapColors(
 )
 
 @Composable
-private fun mapColors(darkTheme: Boolean): MapColors =
-    if (darkTheme) {
+private fun mapColors(): MapColors {
+    val colorScheme = androidx.compose.material3.MaterialTheme.colorScheme
+    
+    return remember(colorScheme) {
         MapColors(
-            mapBackground = Color(0xFF1A1F2E),
-            mapBlock = Color(0xFF252B3B),
-            mapRoad = Color(0xFF2F3648),
-            mapPark = Color(0xFF1E3A2F),
-            searchBackground = Color(0xFF111827),
-            searchBorder = Color(0xFF334155),
-            searchText = Color.White,
-            searchPlaceholder = Color(0xFF64748B),
-            filterButtonBackground = Color(0xFF111827),
-            filterButtonBorder = Color(0xFF334155),
-            fabBackground = Color(0xFF111827),
-            fabIcon = RenCarBlue,
-            sheetBackground = Color(0xFF0F172A),
-            sheetTitle = Color.White,
-            sheetSubtitle = Color(0xFF94A3B8),
-            chipInactiveBackground = Color(0xFF1E293B),
-            chipInactiveText = Color(0xFFCBD5E1),
-            chipActiveBackground = RenCarBlue,
-            chipActiveText = Color.White,
-            inUsePin = Color(0xFF64748B),
-            buttonShadow = Color(0x662563EB),
-        )
-    } else {
-        MapColors(
-            mapBackground = Color(0xFFE8EDF3),
-            mapBlock = Color(0xFFF5F7FA),
-            mapRoad = Color.White,
-            mapPark = Color(0xFFD1FAE5),
-            searchBackground = Color.White,
-            searchBorder = Color(0xFFE2E8F0),
-            searchText = Color(0xFF0F172A),
-            searchPlaceholder = Color(0xFF94A3B8),
-            filterButtonBackground = Color.White,
-            filterButtonBorder = Color(0xFFE2E8F0),
-            fabBackground = Color.White,
-            fabIcon = RenCarBlue,
-            sheetBackground = Color.White,
-            sheetTitle = Color(0xFF0F172A),
-            sheetSubtitle = Color(0xFF64748B),
-            chipInactiveBackground = Color.White,
-            chipInactiveText = Color(0xFF64748B),
-            chipActiveBackground = RenCarBlue,
-            chipActiveText = Color.White,
-            inUsePin = Color(0xFF94A3B8),
-            buttonShadow = Color(0x402563EB),
+            mapBackground = colorScheme.background,
+            mapBlock = colorScheme.surfaceVariant,
+            mapRoad = colorScheme.surface,
+            mapPark = colorScheme.primaryContainer.copy(alpha = 0.2f),
+            searchBackground = colorScheme.surface,
+            searchBorder = colorScheme.outlineVariant,
+            searchText = colorScheme.onSurface,
+            searchPlaceholder = colorScheme.onSurfaceVariant,
+            filterButtonBackground = colorScheme.surface,
+            filterButtonBorder = colorScheme.outlineVariant,
+            fabBackground = colorScheme.surface,
+            fabIcon = colorScheme.primary,
+            sheetBackground = colorScheme.surface,
+            sheetTitle = colorScheme.onSurface,
+            sheetSubtitle = colorScheme.onSurfaceVariant,
+            chipInactiveBackground = colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            chipInactiveText = colorScheme.onSurfaceVariant,
+            chipActiveBackground = colorScheme.primary,
+            chipActiveText = colorScheme.onPrimary,
+            inUsePin = colorScheme.outline,
+            buttonShadow = colorScheme.primary.copy(alpha = 0.2f),
         )
     }
+}
 
 @Composable
 fun MapRoute(
-    onNavigateToVehicleDetail: (String) -> Unit,
+    onNavigateToVehicleDetail: (String, Double?, Double?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel(),
 ) {
@@ -159,7 +138,9 @@ fun MapRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is MapEffect.NavigateToVehicleDetail -> onNavigateToVehicleDetail(effect.vehicleId)
+                is MapEffect.NavigateToVehicleDetail -> {
+                    onNavigateToVehicleDetail(effect.vehicleId, effect.userLat, effect.userLng)
+                }
                 is MapEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }
@@ -180,7 +161,7 @@ fun MapScreen(
     onIntent: (MapIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = mapColors(isSystemInDarkTheme())
+    val colors = mapColors()
     val userLocationState = rememberMapUserLocation()
 
     if (userLocationState.isPermissionDenied) {

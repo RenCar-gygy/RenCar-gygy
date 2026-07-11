@@ -50,23 +50,31 @@ fun RentalSummaryScreen(
 ) {
     Scaffold(
         bottomBar = {
-            Button(
-                onClick = { onIntent(RentalSummaryIntent.PayClicked) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E63D8))
+            Surface(
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp
             ) {
-                Text(
-                    text = "Kiralamayı Bitir ve Öde",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = { onIntent(RentalSummaryIntent.PayClicked) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(
+                        text = "Kiralamayı Bitir ve Öde",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         },
-        containerColor = Color(0xFFF8F9FA)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -84,7 +92,7 @@ fun RentalSummaryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp),
-                    color = Color(0xFF152238),
+                    color = MaterialTheme.colorScheme.primary, // Tema ana rengi
                     shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
                 ) {
                     Column(
@@ -93,8 +101,8 @@ fun RentalSummaryScreen(
                     ) {
                         Text(
                             text = "Yolculuk Özeti",
-                            color = Color.White,
-                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -102,14 +110,14 @@ fun RentalSummaryScreen(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Success",
-                                tint = Color(0xFF4CAF50),
+                                tint = Color(0xFF4CAF50), // Başarı yeşili sabit kalabilir veya onPrimaryContainer
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Araç başarıyla teslim edildi",
-                                color = Color.LightGray,
-                                fontSize = 14.sp
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
@@ -121,11 +129,20 @@ fun RentalSummaryScreen(
                         .height(140.dp)
                         .align(Alignment.BottomCenter)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "🚙 ÖDEME DETAYI", fontSize = 24.sp)
+                    // Buraya araç görseli gelecek, şimdilik placeholder
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "🚙", fontSize = 48.sp)
+                        Text(
+                            text = "ÖDEME DETAYI", 
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -134,14 +151,14 @@ fun RentalSummaryScreen(
             // Tamamen API'ye bağlı araç bilgisi
             Text(
                 text = uiState.vehicleName,
-                fontSize = 22.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = uiState.plate,
-                fontSize = 14.sp,
-                color = Color.Gray,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
 
@@ -153,7 +170,7 @@ fun RentalSummaryScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
@@ -165,16 +182,16 @@ fun RentalSummaryScreen(
                     Text(
                         text = "Fatura Detayı",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.Black
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    HorizontalDivider(color = Color(0xFFEEEEEE))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     FeeRow("Kiralama Süresi", uiState.durationText)
                     FeeRow("Katedilen Mesafe", uiState.distanceText)
 
-                    HorizontalDivider(color = Color(0xFFEEEEEE))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     FeeRow("Kiralama Ücreti", uiState.rentalFee)
                     FeeRow("Hizmet Bedeli", uiState.serviceFee)
@@ -183,7 +200,7 @@ fun RentalSummaryScreen(
                         FeeRow("İndirim", uiState.discount, isDiscount = true)
                     }
 
-                    HorizontalDivider(color = Color(0xFFEEEEEE))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -193,14 +210,14 @@ fun RentalSummaryScreen(
                         Text(
                             text = "Toplam Ödenecek",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = Color.Black
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = uiState.totalFee,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp,
-                            color = Color(0xFF1E63D8)
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -212,7 +229,7 @@ fun RentalSummaryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -220,19 +237,37 @@ fun RentalSummaryScreen(
                     Box(
                         modifier = Modifier
                             .size(48.dp, 32.dp)
-                            .background(Color(0xFF152238), RoundedCornerShape(6.dp)),
+                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(uiState.cardBrand, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            uiState.cardBrand, 
+                            color = MaterialTheme.colorScheme.onPrimary, 
+                            style = MaterialTheme.typography.labelSmall, 
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(text = "Mastercard •••• ${uiState.cardLast4}", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Text(text = "Varsayılan Kart", fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            text = "Mastercard •••• ${uiState.cardLast4}", 
+                            fontWeight = FontWeight.SemiBold, 
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Varsayılan Kart", 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
                 TextButton(onClick = { onIntent(RentalSummaryIntent.ChangeCardClicked) }) {
-                    Text(text = "Değiştir", color = Color(0xFF1E63D8), fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Değiştir", 
+                        color = MaterialTheme.colorScheme.primary, 
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -245,12 +280,16 @@ fun FeeRow(title: String, amount: String, isDiscount: Boolean = false) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = title, fontSize = 14.sp, color = Color.Gray)
+        Text(
+            text = title, 
+            style = MaterialTheme.typography.bodyMedium, 
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(
             text = amount,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isDiscount) FontWeight.Bold else FontWeight.Medium,
-            color = if (isDiscount) Color(0xFF4CAF50) else Color.Black
+            color = if (isDiscount) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
         )
     }
 }

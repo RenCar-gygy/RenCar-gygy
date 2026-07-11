@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.rental.delivery_photos
 
+import androidx.activity.compose.BackHandler
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -24,26 +25,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun DeliveryPhotosRoute(
     onNavigateBack: () -> Unit,
-    // GÜNCELLENDİ: Fotoğraflar yüklendikten sonra Aktif Kiralamaya (Kilidi Aç) yönlendiriyoruz
-    onNavigateToActiveRental: (String) -> Unit,
+    onNavigateToSummary: (String) -> Unit,
     viewModel: DeliveryPhotosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    BackHandler {
+        viewModel.onIntent(DeliveryPhotosIntent.BackClicked)
+    }
+
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is DeliveryPhotosEffect.NavigateBack -> onNavigateBack()
-                // Artık akış gereği Aktif Kiralamaya yönlendiriyoruz
-                is DeliveryPhotosEffect.NavigateToActiveRental -> onNavigateToActiveRental(effect.rentalId)
+                is DeliveryPhotosEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
                 is DeliveryPhotosEffect.ShowError -> {
                     Toast.makeText(context, "Bir hata oluştu", Toast.LENGTH_SHORT).show()
                 }
@@ -74,63 +76,73 @@ fun DeliveryPhotosScreen(
                             .padding(8.dp)
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFF5F5F5))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "Geri",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
+            Surface(
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(24.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = Color(0xFFFBC02D),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Hasarları net çek — teslim sonrası anlaşmazlığı önler.",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFFBC02D),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Hasarları net çek — teslim sonrası anlaşmazlığı önler.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                Button(
-                    onClick = { onIntent(DeliveryPhotosIntent.StartRentalClicked) }, // Adı aynı kaldı ki kodların çökmesin
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    enabled = state.isComplete && !state.isStartingRental,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1E63D8), // Daha estetik mavi tonu
-                        disabledContainerColor = Color(0xFFE0E0E0)
-                    )
-                ) {
-                    if (state.isStartingRental) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                    } else {
-                        // GÜNCELLENDİ: Metinler kiralama başlangıcına uyarlandı
-                        val buttonText = if (state.isComplete) "Fotoğrafları Onayla ve Devam Et" else "Eksik Fotoğrafları Tamamla"
-                        Text(buttonText, fontWeight = FontWeight.Bold)
+                    Button(
+                        onClick = { onIntent(DeliveryPhotosIntent.StartRentalClicked) }, 
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = state.isComplete && !state.isStartingRental,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        )
+                    ) {
+                        if (state.isStartingRental) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                        } else {
+                            val buttonText = if (state.isComplete) "Fotoğrafları Onayla ve Devam Et" else "Eksik Fotoğrafları Tamamla"
+                            Text(buttonText, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -141,12 +153,13 @@ fun DeliveryPhotosScreen(
             Text(
                 text = "Araç teslimi",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = "Başlamadan önce 4 yönü çek",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -159,12 +172,14 @@ fun DeliveryPhotosScreen(
                 Text(
                     text = "${state.vehicleName} - ${state.plate}",
                     fontWeight = FontWeight.Medium,
-                    color = Color.DarkGray
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${state.capturedCount} / 4 çekildi",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E63D8)
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
@@ -229,12 +244,12 @@ fun PhotoBox(
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isCaptured) Color(0xFFE0F2F1) else Color.White)
+            .background(if (isCaptured) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface)
             .then(
                 if (!isCaptured) {
                     Modifier.border(
                         width = 1.dp,
-                        color = Color(0xFFE0E0E0),
+                        color = MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(16.dp)
                     )
                 } else Modifier
@@ -246,15 +261,17 @@ fun PhotoBox(
             Icon(
                 imageVector = if (isCaptured) Icons.Default.DirectionsCar else Icons.Default.PhotoCamera,
                 contentDescription = null,
-                tint = if (isCaptured) Color(0xFF80CBC4) else Color(0xFF1E63D8),
+                tint = if (isCaptured) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Fotoğraf çek",
-                fontSize = 12.sp,
-                color = if (isCaptured) Color.Transparent else Color.Gray
-            )
+            if (!isCaptured) {
+                Text(
+                    text = "Fotoğraf çek",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Direction Tag
@@ -262,15 +279,15 @@ fun PhotoBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(8.dp),
-            color = if (isCaptured) Color(0xFF263238) else Color(0xFFF5F5F5),
+            color = if (isCaptured) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(
                 text = direction.label,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                fontSize = 10.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isCaptured) Color.White else Color.Gray
+                color = if (isCaptured) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -284,7 +301,7 @@ fun PhotoBox(
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
                     .size(24.dp)
-                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
             )
         }
     }

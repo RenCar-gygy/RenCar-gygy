@@ -9,6 +9,7 @@ data class VehicleDetailUiState(
     val vehicle: Vehicle? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val distanceLabel: String = "", // Dinamik mesafe bilgisi
     // API'da olmayan ancak tasarımda bulunan mock alanlar
     val fuelLevel: String = "%72",
     val range: String = "~480 km",

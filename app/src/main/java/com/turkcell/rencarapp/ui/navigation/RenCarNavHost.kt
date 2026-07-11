@@ -179,8 +179,8 @@ fun RenCarNavHost(
             ) {
                 composable(RenCarDestination.Map) {
                     MapRoute(
-                        onNavigateToVehicleDetail = { vehicleId ->
-                            navController.navigate(RenCarDestination.vehicleDetailRoute(vehicleId))
+                        onNavigateToVehicleDetail = { vehicleId, lat, lng ->
+                            navController.navigate(RenCarDestination.vehicleDetailRoute(vehicleId, lat, lng))
                         },
                     )
                 }
@@ -223,6 +223,17 @@ fun RenCarNavHost(
                         route = RenCarDestination.VehicleDetail,
                         arguments = listOf(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_USER_LAT) {
+                                type = NavType.StringType // NavArguments only support certain types, Double is not directly there for URL queries usually, but NavType.FloatType or StringType.
+                                // Actually StringType is safer for optional query params.
+                                nullable = true
+                                defaultValue = null
+                            },
+                            navArgument(RenCarDestination.ARG_USER_LNG) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
                         ),
                     ) {
                         VehicleDetailRoute(
@@ -242,30 +253,14 @@ fun RenCarNavHost(
                     ) {
                         RentalConfirmationRoute(
                             onNavigateBack = { navController.popBackStack() },
-                            // GÜNCELLENDİ: Onaydan sonra Araç Fotoğraflarına geçer (Teslim alırken)
-                            onNavigateToActiveRental = { rentalId ->
-                                navController.navigate(RenCarDestination.deliveryPhotosRoute(rentalId))
-                            }
-                        )
-                    }
-
-                    // 3. ADIM: Araç Fotoğrafları Çekimi (Kiralama Başlarken)
-                    composable(
-                        route = RenCarDestination.DeliveryPhotos,
-                        arguments = listOf(
-                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
-                        ),
-                    ) {
-                        DeliveryPhotosRoute(
-                            onNavigateBack = { navController.popBackStack() },
-                            // GÜNCELLENDİ: Fotoğraflar yüklendikten sonra Aktif Kiralama (Kilidi Aç) ekranına geçer
+                            // GÜNCELLENDİ: Onaydan sonra doğrudan Aktif Kiralamaya (Kilidi Aç) geçer
                             onNavigateToActiveRental = { rentalId ->
                                 navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
                             }
                         )
                     }
 
-                    // 4. ADIM: Aktif Kiralama (Kullanım ve Sayaç)
+                    // 3. ADIM: Aktif Kiralama (Kullanım ve Sayaç)
                     composable(
                         route = RenCarDestination.ActiveRental,
                         arguments = listOf(
@@ -273,7 +268,33 @@ fun RenCarNavHost(
                         ),
                     ) {
                         ActiveRentalRoute(
-                            // GÜNCELLENDİ: Kiralama bitirildiğinde doğrudan Özet (Summary) ekranına geçer
+                            // GÜNCELLENDİ: Kiralama bitirildiğinde fotoğraf çekim ekranına geçer
+                            onNavigateToDeliveryPhotos = { rentalId, name, plate ->
+                                navController.navigate(RenCarDestination.deliveryPhotosRoute(rentalId, name, plate))
+                            }
+                        )
+                    }
+
+                    // 4. ADIM: Araç Fotoğrafları Çekimi (Teslim ederken)
+                    composable(
+                        route = RenCarDestination.DeliveryPhotos,
+                        arguments = listOf(
+                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_VEHICLE_NAME) { 
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                            navArgument(RenCarDestination.ARG_VEHICLE_PLATE) { 
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                        ),
+                    ) {
+                        DeliveryPhotosRoute(
+                            onNavigateBack = { navController.popBackStack() },
+                            // GÜNCELLENDİ: Fotoğraflar yüklendikten sonra Ödeme/Özet ekranına geçer
                             onNavigateToSummary = { rentalId ->
                                 navController.navigate(RenCarDestination.rentalSummaryRoute(rentalId))
                             }

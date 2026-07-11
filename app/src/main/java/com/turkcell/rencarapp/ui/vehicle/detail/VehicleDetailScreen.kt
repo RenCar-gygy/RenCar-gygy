@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.vehicle.detail
 
+import androidx.activity.compose.BackHandler
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,16 +14,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
+import com.turkcell.rencarapp.ui.map.MapLibreMapView
+import com.turkcell.rencarapp.ui.map.MapVehiclePin
+import com.turkcell.rencarapp.ui.map.VehicleCategory
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -34,6 +38,10 @@ fun VehicleDetailRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    BackHandler {
+        viewModel.onIntent(VehicleDetailIntent.BackClicked)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
@@ -61,22 +69,38 @@ fun VehicleDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Geri Butonu
-        IconButton(
-            onClick = { onIntent(VehicleDetailIntent.BackClicked) },
-            modifier = Modifier
-                .padding(16.dp)
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.White)
-                .align(Alignment.TopStart)
-        ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
+        if (state.vehicle != null) {
+            val pin = remember(state.vehicle) {
+                MapVehiclePin(
+                    id = state.vehicle.id,
+                    priceLabel = VehiclePriceFormatter.mapPinLabel(state.vehicle.pricePerDay),
+                    brand = state.vehicle.brand,
+                    model = state.vehicle.model,
+                    plate = state.vehicle.plate,
+                    category = VehicleCategory.ALL,
+                    vehicleType = state.vehicle.type,
+                    latitude = state.vehicle.latitude,
+                    longitude = state.vehicle.longitude,
+                    isInUse = false
+                )
+            }
+
+            MapLibreMapView(
+                pins = listOf(pin),
+                onPinClick = {},
+                gesturesEnabled = false,
+                pinFocusZoom = 15.0,
+                focusVisiblePins = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(350.dp)
+                    .align(Alignment.TopCenter)
+            )
         }
 
-        // Ana Kart
+        // Ana Kart ve İçerik (Z-index: 1)
         if (state.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (state.error != null) {
@@ -84,7 +108,7 @@ fun VehicleDetailScreen(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = state.error, color = Color.Red)
+                Text(text = state.error, color = MaterialTheme.colorScheme.error)
                 Button(onClick = { onIntent(VehicleDetailIntent.LoadVehicle) }) {
                     Text("Tekrar Dene")
                 }
@@ -96,7 +120,7 @@ fun VehicleDetailScreen(
                     .fillMaxWidth()
                     .padding(top = 100.dp),
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
             Column(
                 modifier = Modifier
@@ -113,24 +137,25 @@ fun VehicleDetailScreen(
                         Text(
                             text = "${state.vehicle.brand} ${state.vehicle.model}",
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${state.vehicle.plate} • 250 m uzaklıkta",
-                            color = Color.Gray,
-                            fontSize = 14.sp
+                            text = "${state.vehicle.plate} • ${state.distanceLabel}",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     
                     Surface(
-                        color = Color(0xFFE8F5E9),
+                        color = MaterialTheme.colorScheme.primaryContainer,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = state.vehicle.status.name,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            color = Color(0xFF2E7D32),
-                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -149,7 +174,7 @@ fun VehicleDetailScreen(
                         imageVector = Icons.Default.DirectionsCar,
                         contentDescription = null,
                         modifier = Modifier.size(120.dp),
-                        tint = Color.LightGray
+                        tint = MaterialTheme.colorScheme.outlineVariant
                     )
                 }
 
@@ -204,12 +229,13 @@ fun VehicleDetailScreen(
                         Text(
                             text = VehiclePriceFormatter.minutelyLabel(state.vehicle.pricePerDay),
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = VehiclePriceFormatter.hourlyLabel(state.vehicle.pricePerDay),
-                            color = Color.Gray,
-                            fontSize = 14.sp
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -223,13 +249,34 @@ fun VehicleDetailScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     Text("Rezerve Et", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
-    }
+        }
+
+        // Geri Butonu (Z-index: 2 - En üstte olması için sonda tanımlandı)
+        IconButton(
+            onClick = { onIntent(VehicleDetailIntent.BackClicked) },
+            modifier = Modifier
+                .statusBarsPadding() // Kameranın/Durum çubuğunun altında kalmasını önler
+                .padding(16.dp)
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .align(Alignment.TopStart)
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack, 
+                contentDescription = "Geri",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -243,7 +290,7 @@ fun InfoItem(
 ) {
     Surface(
         modifier = modifier,
-        color = Color(0xFFF9F9F9),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -253,15 +300,28 @@ fun InfoItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = label, color = Color.Gray, fontSize = 11.sp)
-                Text(text = value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(
+                    text = label, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = value, 
+                    fontWeight = FontWeight.Bold, 
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 if (subValue != null) {
-                    Text(text = subValue, color = Color.LightGray, fontSize = 10.sp)
+                    Text(
+                        text = subValue, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), 
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         }
