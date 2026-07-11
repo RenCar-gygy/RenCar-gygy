@@ -86,6 +86,8 @@ fun MapLibreMapView(
     searchFocusLocation: LatLng? = null,
     focusSearchArea: Boolean = false,
     onSearchAreaFocused: () -> Unit = {},
+    gesturesEnabled: Boolean = true,
+    pinFocusZoom: Double = PIN_FOCUS_ZOOM,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -100,6 +102,7 @@ fun MapLibreMapView(
     val latestSearchFocusLocation by rememberUpdatedState(searchFocusLocation)
     val latestFocusSearchArea by rememberUpdatedState(focusSearchArea)
     val latestOnSearchAreaFocused by rememberUpdatedState(onSearchAreaFocused)
+    val latestPinFocusZoom by rememberUpdatedState(pinFocusZoom)
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
     var pinPositions by remember { mutableStateOf<List<PinScreenPosition>>(emptyList()) }
@@ -139,6 +142,10 @@ fun MapLibreMapView(
 
     fun bindMap(map: MapLibreMap) {
         mapRef = map
+        map.uiSettings.setAllGesturesEnabled(gesturesEnabled)
+        map.uiSettings.isAttributionEnabled = gesturesEnabled
+        map.uiSettings.isLogoEnabled = gesturesEnabled
+        
         map.setStyle(Style.Builder().fromJson(OSM_STYLE_JSON)) { style ->
             mapStyle = style
             setupUserLocationLayer(style)
@@ -227,7 +234,7 @@ fun MapLibreMapView(
     DisposableEffect(focusVisiblePins, pins, mapRef) {
         val map = mapRef
         if (latestFocusVisiblePins && pins.isNotEmpty() && map != null) {
-            focusCameraOnPins(map, pins)
+            focusCameraOnPins(map, pins, latestPinFocusZoom)
             latestOnVisiblePinsFocused()
         }
         onDispose { }
@@ -347,7 +354,7 @@ private fun updateUserLocation(style: Style, myLocation: LatLng?) {
     }
 }
 
-private fun focusCameraOnPins(map: MapLibreMap, pins: List<MapVehiclePin>) {
+private fun focusCameraOnPins(map: MapLibreMap, pins: List<MapVehiclePin>, zoom: Double) {
     if (pins.isEmpty()) return
 
     if (pins.size == 1) {
@@ -356,7 +363,7 @@ private fun focusCameraOnPins(map: MapLibreMap, pins: List<MapVehiclePin>) {
             CameraUpdateFactory.newCameraPosition(
                 CameraPosition.Builder()
                     .target(LatLng(pin.latitude, pin.longitude))
-                    .zoom(PIN_FOCUS_ZOOM)
+                    .zoom(zoom)
                     .build(),
             ),
         )
@@ -373,7 +380,7 @@ private fun focusCameraOnPins(map: MapLibreMap, pins: List<MapVehiclePin>) {
     } catch (_: Exception) {
         val first = pins.first()
         map.animateCamera(
-            CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), PIN_FOCUS_ZOOM),
+            CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), zoom),
         )
     }
 }

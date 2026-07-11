@@ -1,6 +1,7 @@
 package com.turkcell.rencarapp.ui.rental.active
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,7 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ActiveRentalRoute(
-    onNavigateToSummary: (String) -> Unit,
+    onNavigateToDeliveryPhotos: (String, String, String) -> Unit,
     viewModel: ActiveRentalViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -34,7 +35,9 @@ fun ActiveRentalRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ActiveRentalEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
+                is ActiveRentalEffect.NavigateToDeliveryPhotos -> {
+                    onNavigateToDeliveryPhotos(effect.rentalId, effect.vehicleName, effect.vehiclePlate)
+                }
                 is ActiveRentalEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -62,31 +65,20 @@ fun ActiveRentalScreen(
     state: ActiveRentalUiState,
     onIntent: (ActiveRentalIntent) -> Unit
 ) {
-    // Box, içindeki bileşenleri üst üste (katman katman) koyar.
-    // İlk yazılan en altta, son yazılan en üstte görünür.
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // --- 1. CANLI HARİTA (MAPLIBRE) BURAYA GELECEK ---
-        // Kırmızı hata veren resmi sildik. Kendi MapLibre harita bileşenini
-        // tam buraya yerleştir. modifier = Modifier.fillMaxSize() vermeyi unutma
-        // ki harita tüm ekranı kaplasın.
-
-        /* ÖRNEK:
-        MapLibreMap(modifier = Modifier.fillMaxSize()) {
-            // Harita ayarlarınız...
-        }
-        */
-
-        // Geçici arka plan (haritayı ekleyene kadar arkası boş kalmasın diye açık mavi)
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE3F2FD)))
+        // --- 1. CANLI HARİTA (MAPLIBRE) ---
+        // Harita arka planı için tema rengi
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
 
         // --- 2. ÜST BİLGİ BARI ---
         Surface(
             modifier = Modifier
                 .padding(top = 48.dp)
                 .align(Alignment.TopCenter),
-            color = Color.Black.copy(alpha = 0.8f),
-            shape = RoundedCornerShape(24.dp)
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 4.dp
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -101,20 +93,20 @@ fun ActiveRentalScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (state.isLocked) "Rezervasyon Aktif" else "Kiralama Aktif - ${state.vehicleName}",
-                    color = Color.White,
-                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Medium
                 )
             }
         }
 
-        // --- 3. ALT BİLGİ VE KONTROL KARTI (SAYAÇ VE FİYAT) ---
+        // --- 3. ALT BİLGİ VE KONTROL KARTI ---
         Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
         ) {
             Column(
@@ -129,24 +121,24 @@ fun ActiveRentalScreen(
                         .width(40.dp)
                         .height(4.dp)
                         .clip(CircleShape)
-                        .background(Color.LightGray)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
                     text = if (state.isLocked) "Kalan Rezervasyon Süresi" else "Geçen Kullanım Süresi",
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
 
                 // SAYACIN GÖRÜNDÜĞÜ YER
                 Text(
                     text = state.duration,
-                    fontSize = 48.sp,
+                    style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
-                    color = if (state.isLocked) Color.DarkGray else Color(0xFF1565C0)
+                    color = if (state.isLocked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -155,19 +147,23 @@ fun ActiveRentalScreen(
                     // Fiyat Kartı
                     Surface(
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFFF5F5F5),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(text = "Anlık ücret", color = Color.Gray, fontSize = 11.sp)
+                            Text(
+                                text = "Anlık ücret", 
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                style = MaterialTheme.typography.labelSmall
+                            )
                             Text(
                                 text = state.currentPrice,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1565C0),
-                                fontSize = 18.sp
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.titleLarge
                             )
                         }
                     }
@@ -177,18 +173,23 @@ fun ActiveRentalScreen(
                     // Mesafe Kartı
                     Surface(
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFFF5F5F5),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(text = "Mesafe", color = Color.Gray, fontSize = 11.sp)
+                            Text(
+                                text = "Mesafe", 
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                style = MaterialTheme.typography.labelSmall
+                            )
                             Text(
                                 text = state.distance,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleLarge
                             )
                         }
                     }
@@ -203,17 +204,20 @@ fun ActiveRentalScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = BorderStroke(1.dp, if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline)
                     ) {
                         Icon(
                             if (state.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = if (state.isLocked) Color(0xFF4CAF50) else Color.DarkGray
+                            contentDescription = null
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (state.isLocked) "Kilidi Aç" else "Kilitle",
-                            color = if (state.isLocked) Color(0xFF4CAF50) else Color.DarkGray
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -226,7 +230,10 @@ fun ActiveRentalScreen(
                             .weight(1.2f)
                             .height(56.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
                         enabled = !state.isLocked
                     ) {
                         Text("Kiralamayı Bitir", fontWeight = FontWeight.Bold)

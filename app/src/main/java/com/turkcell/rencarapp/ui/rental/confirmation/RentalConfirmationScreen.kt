@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.rental.confirmation
 
+import androidx.activity.compose.BackHandler
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -33,6 +34,10 @@ fun RentalConfirmationRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    BackHandler {
+        viewModel.onIntent(RentalConfirmationIntent.BackClicked)
+    }
+
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
@@ -60,34 +65,46 @@ fun RentalConfirmationScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Rezervasyon Onayı", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text("Rezervasyon Onayı", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = {
                     IconButton(onClick = { onIntent(RentalConfirmationIntent.BackClicked) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
+            Surface(
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp
             ) {
-                Button(
-                    onClick = { onIntent(RentalConfirmationIntent.CompleteReservationClicked) },
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E63D8))
+                        .padding(24.dp)
                 ) {
-                    Text("Rezervasyonu Tamamla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Button(
+                        onClick = { onIntent(RentalConfirmationIntent.CompleteReservationClicked) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text("Rezervasyonu Tamamla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
         },
-        containerColor = Color(0xFFF8F9FA)
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -96,7 +113,7 @@ fun RentalConfirmationScreen(
         } else if (state.error != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = state.error, color = Color.Red)
+                    Text(text = state.error, color = MaterialTheme.colorScheme.error)
                     Button(onClick = { onIntent(RentalConfirmationIntent.LoadVehicle) }) {
                         Text("Tekrar Dene")
                     }
@@ -116,7 +133,7 @@ fun RentalConfirmationScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
@@ -126,13 +143,13 @@ fun RentalConfirmationScreen(
                         Surface(
                             modifier = Modifier.size(80.dp),
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFF5F5F5)
+                            color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DirectionsCar,
                                 contentDescription = null,
                                 modifier = Modifier.padding(12.dp),
-                                tint = Color.LightGray
+                                tint = MaterialTheme.colorScheme.outlineVariant
                             )
                         }
 
@@ -142,23 +159,24 @@ fun RentalConfirmationScreen(
                             Text(
                                 text = "${state.vehicle.brand} ${state.vehicle.model}",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "${state.vehicle.plate} • Manuel • 5 kişi",
-                                color = Color.Gray,
-                                fontSize = 13.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Surface(
-                                color = Color(0xFFE8F5E9),
+                                color = MaterialTheme.colorScheme.primaryContainer,
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
                                     text = "Yakıt %72",
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    color = Color(0xFF2E7D32),
-                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -168,7 +186,12 @@ fun RentalConfirmationScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Kiralama planı", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    "Kiralama planı", 
+                    fontWeight = FontWeight.Bold, 
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Plan Seçenekleri
@@ -217,12 +240,12 @@ fun RentalConfirmationScreen(
                     Checkbox(
                         checked = state.isTermsAccepted,
                         onCheckedChange = { onIntent(RentalConfirmationIntent.TermsAcceptedChanged(it)) },
-                        colors = CheckboxDefaults.colors(checkedColor = Color(0xFF1E63D8))
+                        colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                     )
                     Text(
                         text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
-                        fontSize = 14.sp,
-                        color = Color.DarkGray,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
@@ -246,8 +269,8 @@ fun PlanItem(
             .height(80.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, if (isSelected) Color(0xFF1E63D8) else Color(0xFFE0E0E0)),
-        color = if (isSelected) Color(0xFFE3F2FD) else Color.White
+        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -258,12 +281,12 @@ fun PlanItem(
                 text = title,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 fontSize = 13.sp,
-                color = if (isSelected) Color(0xFF1E63D8) else Color.Black
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = price,
                 fontSize = 12.sp,
-                color = if (isSelected) Color(0xFF1E63D8) else Color.Gray,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
         }
@@ -280,15 +303,14 @@ fun PriceDetailItem(label: String, value: String, isTotal: Boolean = false) {
     ) {
         Text(
             text = label,
-            color = if (isTotal) Color.Black else Color.Gray,
-            fontSize = 15.sp,
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
+            color = if (isTotal) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = if (isTotal) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyMedium
         )
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
-            fontSize = if (isTotal) 16.sp else 15.sp,
-            color = Color.Black
+            style = if (isTotal) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+            color = if (isTotal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }
 }

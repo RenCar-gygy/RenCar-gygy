@@ -75,6 +75,10 @@ sealed interface MapIntent {
 }
 
 sealed interface MapEffect {
-    data class NavigateToVehicleDetail(val vehicleId: String) : MapEffect
+    data class NavigateToVehicleDetail(
+        val vehicleId: String,
+        val userLat: Double? = null,
+        val userLng: Double? = null,
+    ) : MapEffect
     data class ShowError(val message: String) : MapEffect
 }

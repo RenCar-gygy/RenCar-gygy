@@ -28,27 +28,39 @@ object RenCarDestination {
 
     // --- Rental alt grafiği (nested) ---
     const val RentalGraph = "rental"
-    const val VehicleDetail = "rental/vehicle/{vehicleId}"
+    const val VehicleDetail = "rental/vehicle/{vehicleId}?userLat={userLat}&userLng={userLng}"
     const val RentalConfirmation = "rental/confirmation/{vehicleId}"
 
     // GÜNCELLENDİ: Artık kiralama bittikten sonra çağrıldığı için sadece rentalId alıyor
     const val RentalSummary = "rental/summary/{rentalId}"
 
-    const val DeliveryPhotos = "rental/delivery_photos/{rentalId}"
+    const val DeliveryPhotos = "rental/delivery_photos/{rentalId}?name={name}&plate={plate}"
     const val ActiveRental = "rental/active/{rentalId}"
 
     const val ARG_VEHICLE_ID = "vehicleId"
     const val ARG_RENTAL_ID = "rentalId"
     const val ARG_PLAN = "plan"
+    const val ARG_USER_LAT = "userLat"
+    const val ARG_USER_LNG = "userLng"
+    const val ARG_VEHICLE_NAME = "name"
+    const val ARG_VEHICLE_PLATE = "plate"
 
-    fun vehicleDetailRoute(vehicleId: String): String = "rental/vehicle/$vehicleId"
+    fun vehicleDetailRoute(vehicleId: String, userLat: Double? = null, userLng: Double? = null): String {
+        return if (userLat != null && userLng != null) {
+            "rental/vehicle/$vehicleId?userLat=$userLat&userLng=$userLng"
+        } else {
+            "rental/vehicle/$vehicleId"
+        }
+    }
 
     fun rentalConfirmationRoute(vehicleId: String): String = "rental/confirmation/$vehicleId"
 
     // GÜNCELLENDİ: Eskiden vehicleId ve plan alıyordu, şimdi sadece faturanın ait olduğu rentalId'yi alıyor
     fun rentalSummaryRoute(rentalId: String): String = "rental/summary/$rentalId"
 
-    fun deliveryPhotosRoute(rentalId: String): String = "rental/delivery_photos/$rentalId"
+    fun deliveryPhotosRoute(rentalId: String, name: String, plate: String): String {
+        return "rental/delivery_photos/$rentalId?name=$name&plate=$plate"
+    }
 
     fun activeRentalRoute(rentalId: String): String = "rental/active/$rentalId"
 

@@ -29,6 +29,6 @@ sealed interface DeliveryPhotosIntent {
 
 sealed interface DeliveryPhotosEffect {
     data object NavigateBack : DeliveryPhotosEffect
-    data class NavigateToActiveRental(val rentalId: String) : DeliveryPhotosEffect
+    data class NavigateToSummary(val rentalId: String) : DeliveryPhotosEffect
     data class ShowError(val message: String) : DeliveryPhotosEffect
 }

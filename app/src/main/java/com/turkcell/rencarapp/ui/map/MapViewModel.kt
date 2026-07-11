@@ -36,6 +36,7 @@ class MapViewModel @Inject constructor(
     val effect: Flow<MapEffect> = _effect.receiveAsFlow()
 
     private var loadVehiclesJob: Job? = null
+    private var refreshAreaLabelJob: Job? = null
 
     init {
         loadVehicles()
@@ -70,6 +71,18 @@ class MapViewModel @Inject constructor(
                 _uiState.update { it.copy(shouldFocusSearchArea = false) }
             }
             is MapIntent.UserLocationUpdated -> {
+                val currentState = _uiState.value
+                val distanceMoved = if (currentState.userLatitude != null && currentState.userLongitude != null) {
+                    haversineMeters(
+                        currentState.userLatitude,
+                        currentState.userLongitude,
+                        intent.latitude,
+                        intent.longitude
+                    )
+                } else {
+                    Double.MAX_VALUE
+                }
+
                 _uiState.update {
                     it.copy(
                         userLatitude = intent.latitude,
@@ -81,10 +94,23 @@ class MapViewModel @Inject constructor(
                         },
                     )
                 }
-                refreshAreaLabel()
+
+                // Sadece 10 metreden fazla hareket edildiyse etiketi yenile
+                if (distanceMoved > 10.0) {
+                    refreshAreaLabel()
+                }
             }
             MapIntent.FindNearestClicked -> findNearest()
-            is MapIntent.VehiclePinClicked -> sendEffect(MapEffect.NavigateToVehicleDetail(intent.vehicleId))
+            is MapIntent.VehiclePinClicked -> {
+                val state = _uiState.value
+                sendEffect(
+                    MapEffect.NavigateToVehicleDetail(
+                        vehicleId = intent.vehicleId,
+                        userLat = state.userLatitude,
+                        userLng = state.userLongitude
+                    )
+                )
+            }
         }
     }
 
@@ -244,7 +270,8 @@ class MapViewModel @Inject constructor(
         val state = _uiState.value
         val reference = resolveAreaReference(state) ?: return
 
-        viewModelScope.launch {
+        refreshAreaLabelJob?.cancel()
+        refreshAreaLabelJob = viewModelScope.launch {
             val pins = state.visiblePins.ifEmpty { state.vehiclePins }
             val label = areaLabelResolver.resolve(
                 latitude = reference.latitude,
@@ -286,9 +313,61 @@ class MapViewModel @Inject constructor(
     )
 
     private fun findNearest() {
-        val nearest = _uiState.value.visiblePins.firstOrNull { !it.isInUse }
-            ?: _uiState.value.vehiclePins.firstOrNull { !it.isInUse }
-        nearest?.let { sendEffect(MapEffect.NavigateToVehicleDetail(it.id)) }
+        val state = _uiState.value
+        val userLat = state.userLatitude
+        val userLng = state.userLongitude
+
+        android.util.Log.d("EnYakinArac", "BAŞLATILDI - Kullanici Konumu -> Lat: $userLat, Lng: $userLng")
+
+        if (userLat == null || userLng == null) {
+            sendEffect(MapEffect.ShowError("Konumunuz henüz belirlenmedi. Lütfen biraz bekleyin."))
+            return
+        }
+
+        val availablePins = state.visiblePins.filter { !it.isInUse }
+            .ifEmpty { state.vehiclePins.filter { !it.isInUse } }
+
+        if (availablePins.isEmpty()) {
+            sendEffect(MapEffect.ShowError("Yakınınızda müsait araç bulunamadı."))
+            return
+        }
+
+        var minDistance = Float.MAX_VALUE
+        var closestPin: MapVehiclePin? = null
+
+        // Manuel döngü ile en küçük mesafeyi garantili bulma
+        for (pin in availablePins) {
+            val results = FloatArray(1)
+            android.location.Location.distanceBetween(
+                userLat, userLng,
+                pin.latitude, pin.longitude,
+                results
+            )
+            val calculatedDistance = results[0]
+            
+            android.util.Log.d(
+                "EnYakinArac", 
+                "Arac Plaka: ${pin.plate}, Konum: (${pin.latitude}, ${pin.longitude}) -> Mesafe: $calculatedDistance m"
+            )
+            
+            if (calculatedDistance < minDistance) {
+                minDistance = calculatedDistance
+                closestPin = pin
+                android.util.Log.d("EnYakinArac", "--> YENİ EN YAKIN ADAY: ${pin.plate} ($calculatedDistance m)")
+            }
+        }
+
+        android.util.Log.d("EnYakinArac", "FİNAL SEÇİLEN ARAÇ: ${closestPin?.plate} ($minDistance m)")
+
+        closestPin?.let {
+            sendEffect(
+                MapEffect.NavigateToVehicleDetail(
+                    vehicleId = it.id,
+                    userLat = userLat,
+                    userLng = userLng
+                )
+            )
+        }
     }
 
     private fun sendEffect(effect: MapEffect) {

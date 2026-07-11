@@ -20,8 +20,15 @@ class DeliveryPhotosViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val rentalId: String = checkNotNull(savedStateHandle["rentalId"])
+    private val vehicleName: String = savedStateHandle.get<String>("name") ?: "Bilinmeyen Araç"
+    private val vehiclePlate: String = savedStateHandle.get<String>("plate") ?: "Plaka Yok"
 
-    private val _uiState = MutableStateFlow(DeliveryPhotosUiState())
+    private val _uiState = MutableStateFlow(
+        DeliveryPhotosUiState(
+            vehicleName = vehicleName,
+            plate = vehiclePlate
+        )
+    )
     val uiState: StateFlow<DeliveryPhotosUiState> = _uiState.asStateFlow()
 
     private val _effect = Channel<DeliveryPhotosEffect>(Channel.BUFFERED)
@@ -51,7 +58,7 @@ class DeliveryPhotosViewModel @Inject constructor(
             // API'da fotoğraf yükleme olmadığı için sadece simüle ediyoruz
             kotlinx.coroutines.delay(800)
             _uiState.update { it.copy(isStartingRental = false) }
-            _effect.send(DeliveryPhotosEffect.NavigateToActiveRental(rentalId))
+            _effect.send(DeliveryPhotosEffect.NavigateToSummary(rentalId))
         }
     }
 }
