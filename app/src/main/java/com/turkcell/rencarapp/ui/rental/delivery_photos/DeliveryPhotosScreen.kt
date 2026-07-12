@@ -170,7 +170,7 @@ fun DeliveryPhotosScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${state.vehicleName} - ${state.plate}",
+                    text = state.vehicleDisplayLabel,
                     fontWeight = FontWeight.Medium,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
