@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,23 +18,30 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DeliveryPhotosViewModel @Inject constructor(
+    private val rentalRepository: RentalRepository,
+    private val vehicleRepository: VehicleRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val rentalId: String = checkNotNull(savedStateHandle["rentalId"])
-    private val vehicleName: String = savedStateHandle.get<String>("name") ?: "Bilinmeyen Araç"
-    private val vehiclePlate: String = savedStateHandle.get<String>("plate") ?: "Plaka Yok"
+    private val navVehicleName: String = savedStateHandle.get<String>("name").orEmpty()
+    private val navVehiclePlate: String = savedStateHandle.get<String>("plate").orEmpty()
 
     private val _uiState = MutableStateFlow(
         DeliveryPhotosUiState(
-            vehicleName = vehicleName,
-            plate = vehiclePlate
+            brand = navVehicleName.substringBefore(" ").trim(),
+            model = navVehicleName.substringAfter(" ", missingDelimiterValue = "").trim(),
+            plate = navVehiclePlate
         )
     )
     val uiState: StateFlow<DeliveryPhotosUiState> = _uiState.asStateFlow()
 
     private val _effect = Channel<DeliveryPhotosEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
+
+    init {
+        loadVehicleInfo()
+    }
 
     fun onIntent(intent: DeliveryPhotosIntent) {
         when (intent) {
@@ -47,6 +56,32 @@ class DeliveryPhotosViewModel @Inject constructor(
             is DeliveryPhotosIntent.BackClicked -> {
                 viewModelScope.launch { _effect.send(DeliveryPhotosEffect.NavigateBack) }
             }
+        }
+    }
+
+    private fun loadVehicleInfo() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            rentalRepository.getById(rentalId)
+                .onSuccess { rental ->
+                    vehicleRepository.getById(rental.vehicleId)
+                        .onSuccess { vehicle ->
+                            _uiState.update {
+                                it.copy(
+                                    brand = vehicle.brand,
+                                    model = vehicle.model,
+                                    plate = vehicle.plate,
+                                    isLoading = false
+                                )
+                            }
+                        }
+                        .onFailure {
+                            _uiState.update { it.copy(isLoading = false) }
+                        }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
         }
     }
 

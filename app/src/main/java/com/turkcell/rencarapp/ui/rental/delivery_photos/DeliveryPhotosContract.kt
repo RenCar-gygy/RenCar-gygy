@@ -3,8 +3,9 @@ package com.turkcell.rencarapp.ui.rental.delivery_photos
 import android.net.Uri
 
 data class DeliveryPhotosUiState(
-    val vehicleName: String = "Renault Clio",
-    val plate: String = "34 RNC 022",
+    val brand: String = "",
+    val model: String = "",
+    val plate: String = "",
     val photos: Map<PhotoDirection, Uri?> = PhotoDirection.entries.associateWith { null },
     val isLoading: Boolean = false,
     val isStartingRental: Boolean = false
@@ -12,6 +13,17 @@ data class DeliveryPhotosUiState(
     val capturedCount: Int = photos.values.count { it != null }
     val isComplete: Boolean = capturedCount == PhotoDirection.entries.size
     val remainingCount: Int = PhotoDirection.entries.size - capturedCount
+
+    val vehicleDisplayLabel: String
+        get() {
+            val namePart = listOf(brand, model).filter { it.isNotBlank() }.joinToString(" ")
+            return when {
+                namePart.isNotBlank() && plate.isNotBlank() -> "$namePart · $plate"
+                namePart.isNotBlank() -> namePart
+                plate.isNotBlank() -> plate
+                else -> "—"
+            }
+        }
 }
 
 enum class PhotoDirection(val label: String) {
