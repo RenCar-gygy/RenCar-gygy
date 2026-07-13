@@ -1,6 +1,7 @@
 package com.turkcell.rencarapp.ui.rental.summary
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,7 +14,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily // 🚀 EKLENDİ: Platformlar arası font uyumu
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,28 +52,111 @@ fun RentalSummaryScreen(
     onIntent: (RentalSummaryIntent) -> Unit
 ) {
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding(), // 🚀 EKLENDİ: Üst saat/şarj çubuğuyla çakışmayı önler
         bottomBar = {
+            // --- PREMIUM ÖDEME PANELİ (Sayfanın altına sabitli) ---
             Surface(
-                tonalElevation = 8.dp,
-                shadowElevation = 8.dp
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 24.dp, // Derin bir gölge ile yukarı kalkık hissi
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
             ) {
-                Button(
-                    onClick = { onIntent(RentalSummaryIntent.PayClicked) },
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                        .navigationBarsPadding() // Alt cihaz tuşlarıyla çakışmayı önler
+                        .padding(horizontal = 24.dp, vertical = 20.dp)
                 ) {
-                    Text(
-                        text = "Kiralamayı Bitir ve Öde",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Seçili Kart Alanı
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Dinamik Kart Logosu (Visa ise Lacivert, Mastercard ise Kırmızı ton)
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp, 34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = if (uiState.cardBrand.contains("VISA", ignoreCase = true))
+                                                listOf(Color(0xFF1A1F71), Color(0xFF2A2F81))
+                                            else
+                                                listOf(Color(0xFFEB001B), Color(0xFFFF4B5A))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = uiState.cardBrand,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontFamily = FontFamily.Default
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "•••• ${uiState.cardLast4}",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Default
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Varsayılan Kart",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Default
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Değiştir Butonu
+                        Text(
+                            text = "Değiştir",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Default
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onIntent(RentalSummaryIntent.ChangeCardClicked) }
+                                .padding(8.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Ödeme Butonu
+                    Button(
+                        onClick = { onIntent(RentalSummaryIntent.PayClicked) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp), // Premium oval yapı
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text(
+                            text = "Kiralamayı Bitir ve Öde",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                            )
+                        )
+                    }
                 }
             }
         },
@@ -82,96 +168,123 @@ fun RentalSummaryScreen(
                 .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Üstteki Koyu Kavisli Alan ve Araç Görseli
+            // --- ÜST BAŞLIK VE KESİŞEN ARAÇ KARTI ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(260.dp)
             ) {
-                Surface(
+                // Mavi Kavisli Arka Plan (Artık Gradient)
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    color = MaterialTheme.colorScheme.primary, // Tema ana rengi
-                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
+                            )
+                        )
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(top = 40.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 40.dp)
                     ) {
                         Text(
                             text = "Yolculuk Özeti",
                             color = MaterialTheme.colorScheme.onPrimary,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                            )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Success",
-                                tint = Color(0xFF4CAF50), // Başarı yeşili sabit kalabilir veya onPrimaryContainer
+                                tint = Color(0xFF81C784), // Parlak bir başarı yeşili
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Araç başarıyla teslim edildi",
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                                style = MaterialTheme.typography.bodySmall
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                )
                             )
                         }
                     }
                 }
 
-                Box(
+                // Havada Asılı Duran (Overlapping) Araç Detay Kartı
+                Card(
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(140.dp)
-                        .align(Alignment.BottomCenter)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth(0.85f)
+                        .height(110.dp)
+                        .align(Alignment.BottomCenter),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
-                    // Buraya araç görseli gelecek, şimdilik placeholder
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "🚙", fontSize = 48.sp)
-                        Text(
-                            text = "ÖDEME DETAYI", 
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                    RoundedCornerShape(16.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "🚙", fontSize = 32.sp)
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
+                        Column(verticalArrangement = Arrangement.Center) {
+                            Text(
+                                text = uiState.vehicleName,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = uiState.plate,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Tamamen API'ye bağlı araç bilgisi
-            Text(
-                text = uiState.vehicleName,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = uiState.plate,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Tamamen API'ye bağlı fatura özeti
+            // --- TERTEMİZ FATURA DETAYI KARTI ---
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp), // Premium oval kenarlar
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -181,27 +294,30 @@ fun RentalSummaryScreen(
                 ) {
                     Text(
                         text = "Fatura Detayı",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
 
                     FeeRow("Kiralama Süresi", uiState.durationText)
                     FeeRow("Katedilen Mesafe", uiState.distanceText)
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
 
                     FeeRow("Kiralama Ücreti", uiState.rentalFee)
                     FeeRow("Hizmet Bedeli", uiState.serviceFee)
 
                     if (uiState.discount.isNotEmpty()) {
-                        FeeRow("İndirim", uiState.discount, isDiscount = true)
+                        FeeRow("İndirim Kampanyası", uiState.discount, isDiscount = true)
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
 
+                    // TOPLAM TUTAR (Devasa ve Vurgulu)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -209,86 +325,48 @@ fun RentalSummaryScreen(
                     ) {
                         Text(
                             text = "Toplam Ödenecek",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                            ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = uiState.totalFee,
-                            fontWeight = FontWeight.ExtraBold,
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                            ),
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Ödeme Yöntemi Kartı
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp, 32.dp)
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            uiState.cardBrand, 
-                            color = MaterialTheme.colorScheme.onPrimary, 
-                            style = MaterialTheme.typography.labelSmall, 
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Mastercard •••• ${uiState.cardLast4}", 
-                            fontWeight = FontWeight.SemiBold, 
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Varsayılan Kart", 
-                            style = MaterialTheme.typography.labelSmall, 
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                TextButton(onClick = { onIntent(RentalSummaryIntent.ChangeCardClicked) }) {
-                    Text(
-                        text = "Değiştir", 
-                        color = MaterialTheme.colorScheme.primary, 
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
         }
     }
 }
 
+// Şık Fatura Satırları
 @Composable
 fun FeeRow(title: String, amount: String, isDiscount: Boolean = false) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = title, 
-            style = MaterialTheme.typography.bodyMedium, 
+            text = title,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+            ),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = amount,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isDiscount) FontWeight.Bold else FontWeight.Medium,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = if (isDiscount) FontWeight.ExtraBold else FontWeight.SemiBold,
+                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+            ),
             color = if (isDiscount) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
         )
     }
