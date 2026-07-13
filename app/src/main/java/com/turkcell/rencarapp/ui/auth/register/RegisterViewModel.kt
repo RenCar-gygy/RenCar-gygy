@@ -3,6 +3,7 @@ package com.turkcell.rencarapp.ui.auth.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.auth.AuthRepository
+import com.turkcell.rencarapp.data.auth.UserRole
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +37,9 @@ class RegisterViewModel @Inject constructor(
                 val digits = intent.value.filter { it.isDigit() }.take(PHONE_DIGIT_LENGTH)
                 updateField { it.copy(phoneNumber = digits) }
             }
+            is RegisterIntent.ReferralCodeChanged -> updateField {
+                it.copy(referralCode = intent.value.uppercase().take(MAX_REFERRAL_CODE_LENGTH))
+            }
             RegisterIntent.BackClicked -> sendEffect(RegisterEffect.NavigateBack)
             RegisterIntent.RegisterClicked -> register()
             RegisterIntent.LoginClicked -> sendEffect(RegisterEffect.NavigateToLogin)
@@ -60,11 +64,18 @@ class RegisterViewModel @Inject constructor(
                 password = state.password,
                 fullName = state.fullName.trim(),
                 phone = state.phoneNumber,
+                referralCode = state.referralCode.trim().ifBlank { null },
             )
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess { sendEffect(RegisterEffect.NavigateToOtp(phoneNumber = state.phoneNumber)) }
+                .onSuccess { tokens ->
+                    when (tokens.user.role) {
+                        UserRole.PENDING -> sendEffect(RegisterEffect.NavigateToLicense)
+                        UserRole.CUSTOMER -> sendEffect(RegisterEffect.NavigateToMain)
+                        UserRole.ADMIN -> sendEffect(RegisterEffect.ShowError("Bu hesap türü desteklenmiyor."))
+                    }
+                }
                 .onFailure { error ->
                     sendEffect(RegisterEffect.ShowError(error.message ?: "Kayıt tamamlanamadı."))
                 }
@@ -100,5 +111,6 @@ class RegisterViewModel @Inject constructor(
         const val MIN_PASSWORD_LENGTH = 6
         const val MAX_PASSWORD_LENGTH = 72
         const val PHONE_DIGIT_LENGTH = 10
+        const val MAX_REFERRAL_CODE_LENGTH = 16
     }
 }

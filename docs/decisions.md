@@ -300,6 +300,6 @@
 - **Ağ:** `NetworkModule` base URL `rencarv2`; OpenAPI JSON `/api/openapi.json`
 - **Vehicle DTO/domain:** `pricePerMinute`, `pricePerHour`, `segment`, `RESERVED` status eklendi
 - **Harita:** Kategori sekmeleri `?segment=` query ile API'den filtrelenir; `includeBusy=true` ile RENTED/RESERVED pinler gri gösterilir; pin fiyatı `pricePerHour` kullanır
-- **License:** `POST /license/upload` artık `selfie` multipart alanı zorunlu (stub PNG ile gönderilir)
-- **Auth DTO:** `RegisterDto.phone` zorunlu; `referralCode` opsiyonel
-- **Sonraki batch:** License selfie gerçek kamera entegrasyonu
+- **License:** `POST /license/upload` artık `selfie` multipart alanı zorunlu; ön/arka yüz ve selfie gerçek kamera ile çekilir
+- **Auth DTO:** `RegisterDto.phone` zorunlu; `referralCode` opsiyonel (kayıt formunda desteklenir)
+- **Kayıt akışı:** `POST /auth/register` token döner; kayıt sonrası OTP yerine doğrudan License ekranına yönlendirilir

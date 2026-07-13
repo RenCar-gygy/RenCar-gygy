@@ -124,7 +124,8 @@ private fun registerColors(darkTheme: Boolean): RegisterColors =
 @Composable
 fun RegisterRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToOtp: (String) -> Unit,
+    onNavigateToLicense: () -> Unit,
+    onNavigateToMain: () -> Unit,
     onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel(),
@@ -136,7 +137,8 @@ fun RegisterRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 RegisterEffect.NavigateBack -> onNavigateBack()
-                is RegisterEffect.NavigateToOtp -> onNavigateToOtp(effect.phoneNumber)
+                RegisterEffect.NavigateToLicense -> onNavigateToLicense()
+                RegisterEffect.NavigateToMain -> onNavigateToMain()
                 RegisterEffect.NavigateToLogin -> onNavigateToLogin()
                 is RegisterEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
@@ -193,7 +195,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Bilgilerini gir; kayıt sonrası telefonuna doğrulama kodu gönderilecek.",
+                text = "Bilgilerini gir; kayıt sonrası ehliyet doğrulama adımına yönlendirileceksin.",
                 color = colors.subtitle,
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
@@ -254,6 +256,18 @@ fun RegisterScreen(
                     onValueChange = { onIntent(RegisterIntent.PhoneChanged(it)) },
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            RegisterFieldLabel(text = "Davet kodu (opsiyonel)", colors = colors)
+            Spacer(modifier = Modifier.height(8.dp))
+            RegisterTextField(
+                value = state.referralCode,
+                onValueChange = { onIntent(RegisterIntent.ReferralCodeChanged(it)) },
+                placeholder = "REN-K7M2XQ",
+                leadingIcon = Icons.Outlined.Person,
+                colors = colors,
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -377,7 +391,7 @@ private fun RegisterInfoBanner(colors: RegisterColors) {
             modifier = Modifier.size(16.dp),
         )
         Text(
-            text = "Kayıt sonrası telefonuna 6 haneli doğrulama kodu gönderilir. Test ortamında kod: 123456.",
+            text = "Kayıt sonrası hesabın oluşturulur ve ehliyet doğrulama ekranına yönlendirilirsin.",
             color = colors.infoText,
             fontSize = 13.sp,
             lineHeight = 18.sp,

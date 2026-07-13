@@ -12,8 +12,8 @@
 | Splash | `ui/splash/` | — | Oturum/token kontrolü; yönlendirme |
 | Onboarding | `ui/onboarding/` | — | Yerel; ilk açılış |
 | Giriş / Kayıt | `ui/auth/login/`, `ui/auth/register/` | `POST /auth/login`, `POST /auth/register` | JWT döner |
-| OTP Doğrulama | `ui/auth/otp/` | **Yok** | Tasarım ekranı; stub veya onboarding adımı |
-| Ehliyet Doğrulama | `ui/license/` | `POST /license/upload`, `GET /license/status` | PENDING → CUSTOMER |
+| OTP Doğrulama | `ui/auth/otp/` | `POST /auth/login`, `POST /auth/verify-otp` | Login akışında; `expiresAt` geri sayımı |
+| Ehliyet Doğrulama | `ui/license/` | `POST /license/upload`, `GET /license/status` | Ön/arka yüz + selfie kamera; PENDING → CUSTOMER |
 
 ---
 

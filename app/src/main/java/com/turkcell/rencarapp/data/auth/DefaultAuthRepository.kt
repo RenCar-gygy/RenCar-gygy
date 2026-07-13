@@ -53,11 +53,13 @@ class DefaultAuthRepository @Inject constructor(
         password: String,
         fullName: String,
         phone: String,
+        referralCode: String?,
     ): Result<AuthTokens> {
         val normalizedPhone = normalizePhone(phone)
         if (normalizedPhone.isBlank()) {
             return Result.failure(IllegalArgumentException("Geçerli bir telefon numarası girin."))
         }
+        val normalizedReferralCode = referralCode?.trim()?.takeIf { it.isNotEmpty() }
         return apiCall {
             val tokens = authApi.register(
                 RegisterDto(
@@ -65,6 +67,7 @@ class DefaultAuthRepository @Inject constructor(
                     password = password,
                     fullName = fullName,
                     phone = normalizedPhone,
+                    referralCode = normalizedReferralCode,
                 ),
             ).toDomain()
             sessionStore.saveSession(tokens)
@@ -137,6 +140,7 @@ class DefaultAuthRepository @Inject constructor(
 
     private fun httpErrorMessage(exception: HttpException): String =
         when (exception.code()) {
+            400 -> "Geçersiz davet kodu veya kayıt bilgileri."
             401 -> "Kimlik doğrulama başarısız."
             409 -> "Bu bilgilerle kayıtlı bir hesap zaten var."
             else -> "Sunucu hatası (${exception.code()})."

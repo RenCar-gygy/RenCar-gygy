@@ -47,6 +47,7 @@ class FakeAuthRepository @Inject constructor(
         password: String,
         fullName: String,
         phone: String,
+        referralCode: String?,
     ): Result<AuthTokens> {
         delay(FAKE_DELAY_MS)
         if (email.isBlank() || password.length < 6 || fullName.isBlank()) {

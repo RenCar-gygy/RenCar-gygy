@@ -16,6 +16,7 @@ interface AuthRepository {
         password: String,
         fullName: String,
         phone: String,
+        referralCode: String? = null,
     ): Result<AuthTokens>
 
     suspend fun logout(): Result<Unit>
