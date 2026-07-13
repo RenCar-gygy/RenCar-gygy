@@ -112,8 +112,8 @@ fun RenCarNavHost(
                 composable(RenCarDestination.Login) {
                     LoginRoute(
                         onNavigateBack = { navController.popBackStack() },
-                        onNavigateToOtp = { phone ->
-                            navController.navigate(RenCarDestination.otpRoute(phone)) {
+                        onNavigateToOtp = { phone, expiresAt ->
+                            navController.navigate(RenCarDestination.otpRoute(phone, expiresAt)) {
                                 launchSingleTop = true
                             }
                         },
@@ -144,6 +144,11 @@ fun RenCarNavHost(
                     route = RenCarDestination.Otp,
                     arguments = listOf(
                         navArgument(RenCarDestination.ARG_PHONE_NUMBER) { type = NavType.StringType },
+                        navArgument(RenCarDestination.ARG_OTP_EXPIRES_AT) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
                     ),
                 ) {
                     OtpRoute(

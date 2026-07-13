@@ -23,18 +23,22 @@ class DefaultLicenseRepository @Inject constructor(
     override suspend fun upload(
         frontImageBytes: ByteArray,
         backImageBytes: ByteArray,
+        selfieImageBytes: ByteArray,
     ): Result<LicenseInfo> {
         val frontBytes = normalizeImageBytes(frontImageBytes)
         val backBytes = normalizeImageBytes(backImageBytes)
-        if (frontBytes.isEmpty() || backBytes.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Ön ve arka ehliyet fotoğrafı zorunludur."))
+        val selfieBytes = normalizeImageBytes(selfieImageBytes)
+        if (frontBytes.isEmpty() || backBytes.isEmpty() || selfieBytes.isEmpty()) {
+            return Result.failure(
+                IllegalArgumentException("Ön, arka ehliyet ve selfie fotoğrafı zorunludur."),
+            )
         }
         return authorizedCall { authorization ->
             licenseApi.upload(
                 authorization = authorization,
                 front = imagePart(fieldName = "front", fileName = "front.png", bytes = frontBytes),
                 back = imagePart(fieldName = "back", fileName = "back.png", bytes = backBytes),
-                selfie = imagePart(fieldName = "selfie", fileName = "selfie.png", bytes = frontBytes),
+                selfie = imagePart(fieldName = "selfie", fileName = "selfie.png", bytes = selfieBytes),
             ).toDomain()
         }
     }

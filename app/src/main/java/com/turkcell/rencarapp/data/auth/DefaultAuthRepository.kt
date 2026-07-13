@@ -8,6 +8,7 @@ import com.turkcell.rencarapp.data.network.dto.UserResponseDto
 import com.turkcell.rencarapp.data.network.dto.VerifyOtpDto
 import com.turkcell.rencarapp.data.session.SessionStore
 import retrofit2.HttpException
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,6 +29,7 @@ class DefaultAuthRepository @Inject constructor(
             OtpChallenge(
                 message = response.message,
                 phone = response.phone,
+                expiresAtEpochSeconds = parseExpiresAtEpochSeconds(response.expiresAt),
             )
         }
     }
@@ -121,6 +123,15 @@ class DefaultAuthRepository @Inject constructor(
             UserRole.ADMIN.name -> UserRole.ADMIN
             else -> UserRole.PENDING
         }
+
+    private fun parseExpiresAtEpochSeconds(expiresAt: String?): Long? {
+        if (expiresAt.isNullOrBlank()) return null
+        return try {
+            Instant.parse(expiresAt).epochSecond
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     private fun bearer(accessToken: String): String = "Bearer $accessToken"
 

@@ -54,7 +54,14 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess { sendEffect(LoginEffect.NavigateToOtp(phoneNumber = state.phoneNumber)) }
+                .onSuccess { challenge ->
+                    sendEffect(
+                        LoginEffect.NavigateToOtp(
+                            phoneNumber = state.phoneNumber,
+                            expiresAtEpochSeconds = challenge.expiresAtEpochSeconds,
+                        ),
+                    )
+                }
                 .onFailure { error ->
                     sendEffect(LoginEffect.ShowError(error.message ?: "Kod gönderilemedi."))
                 }

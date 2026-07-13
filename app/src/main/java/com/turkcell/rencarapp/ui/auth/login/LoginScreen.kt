@@ -116,7 +116,7 @@ private fun loginColors(darkTheme: Boolean): LoginColors =
 @Composable
 fun LoginRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToOtp: (String) -> Unit,
+    onNavigateToOtp: (String, Long?) -> Unit,
     onNavigateToRegister: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
@@ -128,7 +128,10 @@ fun LoginRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 LoginEffect.NavigateBack -> onNavigateBack()
-                is LoginEffect.NavigateToOtp -> onNavigateToOtp(effect.phoneNumber)
+                is LoginEffect.NavigateToOtp -> onNavigateToOtp(
+                    effect.phoneNumber,
+                    effect.expiresAtEpochSeconds,
+                )
                 LoginEffect.NavigateToRegister -> onNavigateToRegister()
                 is LoginEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()

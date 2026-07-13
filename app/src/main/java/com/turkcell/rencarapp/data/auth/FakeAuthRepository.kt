@@ -2,6 +2,7 @@ package com.turkcell.rencarapp.data.auth
 
 import com.turkcell.rencarapp.data.session.SessionStore
 import kotlinx.coroutines.delay
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +24,7 @@ class FakeAuthRepository @Inject constructor(
             OtpChallenge(
                 message = "Doğrulama kodu SMS ile gönderildi (simülasyon).",
                 phone = normalizedPhone,
+                expiresAtEpochSeconds = Instant.now().plusSeconds(42).epochSecond,
             ),
         )
     }

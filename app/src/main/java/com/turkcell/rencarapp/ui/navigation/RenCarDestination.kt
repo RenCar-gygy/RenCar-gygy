@@ -16,7 +16,8 @@ object RenCarDestination {
     const val Login = "auth/login"
     const val Register = "auth/register"
     const val ARG_PHONE_NUMBER = "phoneNumber"
-    const val Otp = "auth/otp/{$ARG_PHONE_NUMBER}"
+    const val ARG_OTP_EXPIRES_AT = "expiresAt"
+    const val Otp = "auth/otp/{$ARG_PHONE_NUMBER}?expiresAt={expiresAt}"
     const val License = "auth/license"
 
     // --- Main grafiği ---
@@ -64,7 +65,13 @@ object RenCarDestination {
 
     fun activeRentalRoute(rentalId: String): String = "rental/active/$rentalId"
 
-    fun otpRoute(phoneNumber: String): String = "auth/otp/$phoneNumber"
+    fun otpRoute(phoneNumber: String, expiresAtEpochSeconds: Long? = null): String {
+        return if (expiresAtEpochSeconds != null) {
+            "auth/otp/$phoneNumber?expiresAt=$expiresAtEpochSeconds"
+        } else {
+            "auth/otp/$phoneNumber"
+        }
+    }
 
     val bottomBarRoutes = setOf(Map, RentalHistory, Wallet, Profile)
 }

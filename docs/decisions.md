@@ -302,4 +302,4 @@
 - **Harita:** Kategori sekmeleri `?segment=` query ile API'den filtrelenir; `includeBusy=true` ile RENTED/RESERVED pinler gri gösterilir; pin fiyatı `pricePerHour` kullanır
 - **License:** `POST /license/upload` artık `selfie` multipart alanı zorunlu (stub PNG ile gönderilir)
 - **Auth DTO:** `RegisterDto.phone` zorunlu; `referralCode` opsiyonel
-- **Sonraki batch:** OTP `expiresAt` geri sayımı, License selfie UI (gerçek kamera)
+- **Sonraki batch:** License selfie gerçek kamera entegrasyonu

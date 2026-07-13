@@ -3,6 +3,7 @@ package com.turkcell.rencarapp.data.auth
 data class OtpChallenge(
     val message: String,
     val phone: String,
+    val expiresAtEpochSeconds: Long? = null,
 )
 
 interface AuthRepository {

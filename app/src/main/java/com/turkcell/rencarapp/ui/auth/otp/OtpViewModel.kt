@@ -28,6 +28,9 @@ class OtpViewModel @Inject constructor(
     private val phoneNumber: String =
         savedStateHandle.get<String>(RenCarDestination.ARG_PHONE_NUMBER).orEmpty()
 
+    private var otpExpiresAtEpochSeconds: Long? =
+        savedStateHandle.get<String>(RenCarDestination.ARG_OTP_EXPIRES_AT)?.toLongOrNull()
+
     private val _uiState = MutableStateFlow(
         OtpUiState(
             phoneNumber = phoneNumber,
@@ -42,7 +45,7 @@ class OtpViewModel @Inject constructor(
     private var countdownJob: Job? = null
 
     init {
-        startCountdown()
+        startCountdown(resolveRemainingSeconds())
     }
 
     fun onIntent(intent: OtpIntent) {
@@ -74,7 +77,10 @@ class OtpViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
 
             result
-                .onSuccess { startCountdown() }
+                .onSuccess { challenge ->
+                    otpExpiresAtEpochSeconds = challenge.expiresAtEpochSeconds
+                    startCountdown(resolveRemainingSeconds())
+                }
                 .onFailure { error ->
                     sendEffect(OtpEffect.ShowError(error.message ?: "Kod tekrar gönderilemedi."))
                 }
@@ -107,16 +113,19 @@ class OtpViewModel @Inject constructor(
         }
     }
 
-    private fun startCountdown() {
+    private fun startCountdown(initialSeconds: Int) {
         countdownJob?.cancel()
+        val seconds = initialSeconds.coerceAtLeast(0)
         _uiState.update {
             it.copy(
-                remainingSeconds = OtpUiState.RESEND_SECONDS,
-                isResendEnabled = false,
+                remainingSeconds = seconds,
+                isResendEnabled = seconds == 0,
             )
         }
+        if (seconds == 0) return
+
         countdownJob = viewModelScope.launch {
-            var remaining = OtpUiState.RESEND_SECONDS
+            var remaining = seconds
             while (remaining > 0) {
                 delay(1_000)
                 remaining--
@@ -124,6 +133,12 @@ class OtpViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isResendEnabled = true) }
         }
+    }
+
+    private fun resolveRemainingSeconds(): Int {
+        val expiresAt = otpExpiresAtEpochSeconds ?: return OtpUiState.DEFAULT_RESEND_SECONDS
+        val remaining = (expiresAt - (System.currentTimeMillis() / 1000)).toInt()
+        return remaining.coerceAtLeast(0)
     }
 
     private fun sendEffect(effect: OtpEffect) {

@@ -38,7 +38,8 @@ class LicenseViewModel @Inject constructor(
     fun onIntent(intent: LicenseIntent) {
         when (intent) {
             LicenseIntent.BackClicked -> sendEffect(LicenseEffect.NavigateBack)
-            LicenseIntent.UploadBackClicked -> uploadBack()
+            LicenseIntent.UploadBackClicked -> markBackUploaded()
+            LicenseIntent.UploadSelfieClicked -> uploadDocuments()
             LicenseIntent.ContinueClicked -> continueFlow()
         }
     }
@@ -58,21 +59,29 @@ class LicenseViewModel @Inject constructor(
             when (status) {
                 LicenseStatus.APPROVED -> it.copy(
                     isBackUploaded = true,
+                    isSelfieUploaded = true,
+                    activeStepIndex = 2,
                     isContinueEnabled = true,
                     rejectReason = null,
                 )
                 LicenseStatus.UNDER_REVIEW -> it.copy(
                     isBackUploaded = true,
+                    isSelfieUploaded = true,
+                    activeStepIndex = 2,
                     isContinueEnabled = false,
                     rejectReason = null,
                 )
                 LicenseStatus.REJECTED -> it.copy(
                     isBackUploaded = false,
+                    isSelfieUploaded = false,
+                    activeStepIndex = 0,
                     isContinueEnabled = false,
                     rejectReason = rejectReason,
                 )
                 LicenseStatus.NOT_SUBMITTED -> it.copy(
                     isBackUploaded = false,
+                    isSelfieUploaded = false,
+                    activeStepIndex = 0,
                     isContinueEnabled = false,
                     rejectReason = null,
                 )
@@ -80,14 +89,26 @@ class LicenseViewModel @Inject constructor(
         }
     }
 
-    private fun uploadBack() {
-        if (_uiState.value.isLoading) return
+    private fun markBackUploaded() {
+        if (_uiState.value.isLoading || _uiState.value.isBackUploaded) return
+        _uiState.update {
+            it.copy(
+                isBackUploaded = true,
+                activeStepIndex = 1,
+            )
+        }
+    }
+
+    private fun uploadDocuments() {
+        val state = _uiState.value
+        if (state.isLoading || !state.isBackUploaded || state.isSelfieUploaded) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = licenseRepository.upload(
                 frontImageBytes = STUB_IMAGE_BYTES,
                 backImageBytes = STUB_IMAGE_BYTES,
+                selfieImageBytes = STUB_IMAGE_BYTES,
             )
             _uiState.update { it.copy(isLoading = false) }
 
