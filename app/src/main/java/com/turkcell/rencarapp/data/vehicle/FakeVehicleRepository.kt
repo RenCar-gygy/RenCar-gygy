@@ -15,6 +15,13 @@ class FakeVehicleRepository @Inject constructor() : VehicleRepository {
             model = "Passat",
             type = VehicleType.SEDAN,
             pricePerDay = 1500.0,
+            pricePerMinute = 1.04,
+            pricePerHour = 62.5,
+            fuelPercent = 80,
+            rangeKm = 420,
+            transmission = VehicleTransmission.AUTOMATIC,
+            seats = 5,
+            segment = VehicleSegment.COMFORT,
             status = VehicleStatus.AVAILABLE,
             latitude = 41.0151,
             longitude = 28.9795,
@@ -26,17 +33,29 @@ class FakeVehicleRepository @Inject constructor() : VehicleRepository {
             model = "Clio",
             type = VehicleType.HATCHBACK,
             pricePerDay = 900.0,
+            pricePerMinute = 0.63,
+            pricePerHour = 37.5,
+            fuelPercent = 65,
+            rangeKm = 310,
+            transmission = VehicleTransmission.MANUAL,
+            seats = 5,
+            segment = VehicleSegment.ECONOMY,
             status = VehicleStatus.AVAILABLE,
             latitude = 41.0250,
             longitude = 28.9900,
         ),
     )
 
-    override suspend fun listAvailable(type: VehicleType?): Result<List<Vehicle>> {
+    override suspend fun listAvailable(
+        type: VehicleType?,
+        segment: VehicleSegment?,
+        includeBusy: Boolean,
+    ): Result<List<Vehicle>> {
         delay(FAKE_DELAY_MS)
         val filtered = vehicles.filter { vehicle ->
-            vehicle.status == VehicleStatus.AVAILABLE &&
-                (type == null || vehicle.type == type)
+            (includeBusy || vehicle.status == VehicleStatus.AVAILABLE) &&
+                (type == null || vehicle.type == type) &&
+                (segment == null || vehicle.segment == segment)
         }
         return Result.success(filtered)
     }

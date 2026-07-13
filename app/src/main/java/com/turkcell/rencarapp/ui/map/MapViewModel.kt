@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.vehicle.Vehicle
 import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
+import com.turkcell.rencarapp.data.vehicle.VehicleSegment
 import com.turkcell.rencarapp.data.vehicle.VehicleStatus
 import com.turkcell.rencarapp.data.vehicle.VehicleType
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -182,12 +183,19 @@ class MapViewModel @Inject constructor(
 
     private suspend fun fetchVehiclesFromApi(category: VehicleCategory): Result<List<Vehicle>> =
         when (category) {
-            VehicleCategory.ALL -> vehicleRepository.listAvailable()
-            VehicleCategory.ECONOMIC -> vehicleRepository.listAvailable(VehicleType.HATCHBACK)
-            VehicleCategory.SUV -> vehicleRepository.listAvailable(VehicleType.SUV)
-            VehicleCategory.COMFORT -> vehicleRepository.listAvailable().map { vehicles ->
-                vehicles.filter { it.type in COMFORT_API_TYPES }
-            }
+            VehicleCategory.ALL -> vehicleRepository.listAvailable(includeBusy = true)
+            VehicleCategory.ECONOMIC -> vehicleRepository.listAvailable(
+                segment = VehicleSegment.ECONOMY,
+                includeBusy = true,
+            )
+            VehicleCategory.SUV -> vehicleRepository.listAvailable(
+                segment = VehicleSegment.SUV,
+                includeBusy = true,
+            )
+            VehicleCategory.COMFORT -> vehicleRepository.listAvailable(
+                segment = VehicleSegment.COMFORT,
+                includeBusy = true,
+            )
         }
 
     private fun selectCategory(category: VehicleCategory) {
@@ -379,25 +387,26 @@ class MapViewModel @Inject constructor(
     companion object {
         private const val SEARCH_RADIUS_METERS = 8_000.0
 
-        private val COMFORT_API_TYPES = setOf(
-            VehicleType.SEDAN,
-            VehicleType.STATION,
-            VehicleType.MINIVAN,
-        )
-
         private fun Vehicle.toMapPin(): MapVehiclePin =
             MapVehiclePin(
                 id = id,
-                priceLabel = VehiclePriceFormatter.mapPinLabel(pricePerDay),
+                priceLabel = VehiclePriceFormatter.mapPinLabel(this),
                 brand = brand,
                 model = model,
                 plate = plate,
-                category = type.toCategory(),
+                category = segment.toCategory(),
                 vehicleType = type,
                 latitude = latitude,
                 longitude = longitude,
                 isInUse = status != VehicleStatus.AVAILABLE,
             )
+
+        private fun VehicleSegment.toCategory(): VehicleCategory =
+            when (this) {
+                VehicleSegment.ECONOMY -> VehicleCategory.ECONOMIC
+                VehicleSegment.SUV -> VehicleCategory.SUV
+                VehicleSegment.COMFORT -> VehicleCategory.COMFORT
+            }
 
         private fun VehicleType.toCategory(): VehicleCategory =
             when (this) {

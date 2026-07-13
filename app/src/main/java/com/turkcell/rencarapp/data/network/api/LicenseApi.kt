@@ -10,7 +10,7 @@ import retrofit2.http.Part
 
 /**
  * License API — OpenAPI /license uçları.
- * Tek kaynak: https://rencar.halitkalayci.com/api/docs
+ * Tek kaynak: https://rencarv2.halitkalayci.com/api/openapi.json
  */
 interface LicenseApi {
 
@@ -25,5 +25,6 @@ interface LicenseApi {
         @Header("Authorization") authorization: String,
         @Part front: MultipartBody.Part,
         @Part back: MultipartBody.Part,
+        @Part selfie: MultipartBody.Part,
     ): LicenseStatusResponseDto
 }

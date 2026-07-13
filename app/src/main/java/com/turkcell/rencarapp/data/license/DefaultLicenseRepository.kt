@@ -34,6 +34,7 @@ class DefaultLicenseRepository @Inject constructor(
                 authorization = authorization,
                 front = imagePart(fieldName = "front", fileName = "front.png", bytes = frontBytes),
                 back = imagePart(fieldName = "back", fileName = "back.png", bytes = backBytes),
+                selfie = imagePart(fieldName = "selfie", fileName = "selfie.png", bytes = frontBytes),
             ).toDomain()
         }
     }

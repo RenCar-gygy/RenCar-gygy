@@ -14,7 +14,7 @@ import retrofit2.http.POST
 
 /**
  * Auth API — OpenAPI /auth uçları.
- * Tek kaynak: https://rencar.halitkalayci.com/api/docs-json
+ * Tek kaynak: https://rencarv2.halitkalayci.com/api/openapi.json
  */
 interface AuthApi {
 

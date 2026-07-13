@@ -11,7 +11,7 @@
 - DI: Hilt (KSP)
 - Navigasyon: Compose Navigation (iç içe grafikler)
 - Harita: MapLibre + OpenStreetMap
-- Backend: `https://rencar.halitkalayci.com/` REST API (OpenAPI: `/api/docs`)
+- Backend: `https://rencarv2.halitkalayci.com/` REST API (OpenAPI: `/api/docs`, JSON: `/api/openapi.json`)
 
 ---
 
@@ -26,7 +26,7 @@ Hangi işlem olursa olsun tek seferde maksimum (birbiriyle alakalı) 5 dosyalar 
 
 Eğer herhangi bir operasyonda bilgi ya da referans eksikliği/hatası yaşıyorsan buradaki eksik/hatalı bilgiyi uydurman yasak. Böyle bir durumda operasyonu durdur ve kullanıcıya sorarak ilerle.
 
-API sözleşmesi için tek kaynak: `https://rencar.halitkalayci.com/api/docs` (JSON: `/api/docs-json`).
+API sözleşmesi için tek kaynak: `https://rencarv2.halitkalayci.com/api/docs` (JSON: `/api/openapi.json`).
 Tasarımda olup API'da karşılığı olmayan ekranlar (OTP, cüzdan, teslim fotoğrafı vb.) stub/mock olarak işaretlenir; davranış uydurulmaz.
 
 ### 2.3) ÖNCE PLANLA, SONRA KODLA
