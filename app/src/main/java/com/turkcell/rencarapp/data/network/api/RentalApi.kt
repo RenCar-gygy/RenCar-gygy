@@ -2,6 +2,7 @@ package com.turkcell.rencarapp.data.network.api
 
 import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
+import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -32,4 +33,10 @@ interface RentalApi {
         @Header("Authorization") authorization: String,
         @Path("id") id: String
     ): RentalResponseDto
+
+    @GET("vehicles/{id}")
+    suspend fun getVehicleById(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String
+    ): VehicleResponseDto
 }

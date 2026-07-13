@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.data.rental
 
+import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -55,6 +56,24 @@ class FakeRentalRepository @Inject constructor() : RentalRepository {
         val completed = current.copy(status = RentalStatus.COMPLETED)
         rentals[index] = completed
         return Result.success(completed)
+    }
+
+    // YENİ EKLENEN KISIM: Fake araç verisi döndüren metod
+    override suspend fun getVehicleById(id: String): Result<VehicleResponseDto> {
+        delay(FAKE_DELAY_MS)
+        // Fake olduğu için ekranda güzel duracak sabit bir araç modeli dönüyoruz
+        val fakeVehicle = VehicleResponseDto(
+            id = id,
+            plate = "34 TRK 99",
+            brand = "Renault",
+            model = "Clio",
+            type = "HATCHBACK",
+            pricePerDay = 1500.0,
+            status = "RENTED",
+            latitude = 41.02,
+            longitude = 28.98
+        )
+        return Result.success(fakeVehicle)
     }
 
     private companion object {

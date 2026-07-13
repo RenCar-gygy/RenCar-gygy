@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.rental.RentalRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,20 +62,29 @@ class RentalHistoryViewModel @Inject constructor(
             val result = rentalRepository.listMine()
 
             result.onSuccess { rentals ->
-                val uiModels = rentals.map { rental ->
-                    val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
+                // Araç detaylarını paralel (aynı anda) çekmek için coroutineScope ve async kullanıyoruz
+                val uiModels = coroutineScope {
+                    rentals.map { rental ->
+                        async {
+                            val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
 
-                    // ÇÖZÜM: API'den gelen devasa ID'nin sadece ilk 4 harfini alıp büyütüyoruz
-                    val shortVehicleId = rental.vehicleId.take(4).uppercase()
+                            // Araç API'sini çağırıp marka/model bilgisini alıyoruz
+                            val vehicleResult = rentalRepository.getVehicleById(rental.vehicleId)
 
-                    RentalUiModel(
-                        id = rental.id,
-                        vehicleName = "Araç $shortVehicleId", // Artık "Araç 4505" gibi şık duracak
-                        dateText = dateFormatter.format(rental.startDate),
-                        durationText = "$durationMinutes dk",
-                        distanceText = "12,4 km",
-                        priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
-                    )
+                            // Başarılı olursa Toyota Corolla yazar, hata olursa fallback olarak ID'nin ilk 4 harfini yazar
+                            val vehicleName = vehicleResult.getOrNull()?.let { "${it.brand} ${it.model}" }
+                                ?: "Araç ${rental.vehicleId.take(4).uppercase()}"
+
+                            RentalUiModel(
+                                id = rental.id,
+                                vehicleName = vehicleName,
+                                dateText = dateFormatter.format(rental.startDate),
+                                durationText = "$durationMinutes dk",
+                                distanceText = "12,4 km",
+                                priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
+                            )
+                        }
+                    }.awaitAll() // Bütün araç detay isteklerinin bitmesini bekliyor
                 }
 
                 _uiState.update {

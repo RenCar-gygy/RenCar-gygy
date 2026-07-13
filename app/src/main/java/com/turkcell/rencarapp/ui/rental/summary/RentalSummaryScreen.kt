@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily // 🚀 EKLENDİ: Platformlar arası font uyumu
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,10 +40,18 @@ fun RentalSummaryRoute(
         }
     }
 
-    RentalSummaryScreen(
-        uiState = uiState,
-        onIntent = viewModel::onIntent
-    )
+    // YENİ EKLENDİ: Eğer veriler henüz yükleniyorsa, boş/eski ekran yerine yükleniyor ikonu göster.
+    // (ViewModel'da fetch işlemi başladığında isLoading'i true yapmayı unutmayın)
+    if (uiState.isLoading || uiState.vehicleName.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        }
+    } else {
+        RentalSummaryScreen(
+            uiState = uiState,
+            onIntent = viewModel::onIntent
+        )
+    }
 }
 
 @Composable
@@ -54,18 +62,18 @@ fun RentalSummaryScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding(), // 🚀 EKLENDİ: Üst saat/şarj çubuğuyla çakışmayı önler
+            .statusBarsPadding(),
         bottomBar = {
-            // --- PREMIUM ÖDEME PANELİ (Sayfanın altına sabitli) ---
+            // --- PREMIUM ÖDEME PANELİ ---
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 24.dp, // Derin bir gölge ile yukarı kalkık hissi
+                shadowElevation = 24.dp,
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding() // Alt cihaz tuşlarıyla çakışmayı önler
+                        .navigationBarsPadding()
                         .padding(horizontal = 24.dp, vertical = 20.dp)
                 ) {
                     // Seçili Kart Alanı
@@ -75,7 +83,6 @@ fun RentalSummaryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Dinamik Kart Logosu (Visa ise Lacivert, Mastercard ise Kırmızı ton)
                             Box(
                                 modifier = Modifier
                                     .size(52.dp, 34.dp)
@@ -119,7 +126,6 @@ fun RentalSummaryScreen(
                             }
                         }
 
-                        // Değiştir Butonu
                         Text(
                             text = "Değiştir",
                             style = MaterialTheme.typography.labelLarge.copy(
@@ -136,13 +142,12 @@ fun RentalSummaryScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Ödeme Butonu
                     Button(
                         onClick = { onIntent(RentalSummaryIntent.PayClicked) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = RoundedCornerShape(16.dp), // Premium oval yapı
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -153,7 +158,7 @@ fun RentalSummaryScreen(
                             text = "Kiralamayı Bitir ve Öde",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                fontFamily = FontFamily.Default
                             )
                         )
                     }
@@ -174,7 +179,6 @@ fun RentalSummaryScreen(
                     .fillMaxWidth()
                     .height(260.dp)
             ) {
-                // Mavi Kavisli Arka Plan (Artık Gradient)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -200,7 +204,7 @@ fun RentalSummaryScreen(
                             color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Black,
-                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                fontFamily = FontFamily.Default
                             )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -208,7 +212,7 @@ fun RentalSummaryScreen(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Success",
-                                tint = Color(0xFF81C784), // Parlak bir başarı yeşili
+                                tint = Color(0xFF81C784),
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -217,14 +221,13 @@ fun RentalSummaryScreen(
                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium,
-                                    fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                    fontFamily = FontFamily.Default
                                 )
                             )
                         }
                     }
                 }
 
-                // Havada Asılı Duran (Overlapping) Araç Detay Kartı
                 Card(
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
@@ -254,19 +257,19 @@ fun RentalSummaryScreen(
                         Spacer(modifier = Modifier.width(20.dp))
                         Column(verticalArrangement = Arrangement.Center) {
                             Text(
-                                text = uiState.vehicleName,
+                                text = uiState.vehicleName, // VERİ BURADAN GELİYOR
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = uiState.plate,
+                                text = uiState.plate, // VERİ BURADAN GELİYOR
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -277,12 +280,12 @@ fun RentalSummaryScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- TERTEMİZ FATURA DETAYI KARTI ---
+            // --- FATURA DETAYI KARTI ---
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(24.dp), // Premium oval kenarlar
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
@@ -296,7 +299,7 @@ fun RentalSummaryScreen(
                         text = "Fatura Detayı",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Black,
-                            fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                            fontFamily = FontFamily.Default
                         ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -317,7 +320,7 @@ fun RentalSummaryScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
 
-                    // TOPLAM TUTAR (Devasa ve Vurgulu)
+                    // TOPLAM TUTAR
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -327,15 +330,15 @@ fun RentalSummaryScreen(
                             text = "Toplam Ödenecek",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = uiState.totalFee,
+                            text = uiState.totalFee, // VERİ BURADAN GELİYOR
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Black,
-                                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -346,7 +349,6 @@ fun RentalSummaryScreen(
     }
 }
 
-// Şık Fatura Satırları
 @Composable
 fun FeeRow(title: String, amount: String, isDiscount: Boolean = false) {
     Row(
@@ -357,7 +359,7 @@ fun FeeRow(title: String, amount: String, isDiscount: Boolean = false) {
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                fontFamily = FontFamily.Default
             ),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -365,7 +367,7 @@ fun FeeRow(title: String, amount: String, isDiscount: Boolean = false) {
             text = amount,
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = if (isDiscount) FontWeight.ExtraBold else FontWeight.SemiBold,
-                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                fontFamily = FontFamily.Default
             ),
             color = if (isDiscount) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
         )
