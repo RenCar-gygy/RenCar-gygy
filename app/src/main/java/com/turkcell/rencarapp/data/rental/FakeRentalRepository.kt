@@ -57,8 +57,6 @@ class FakeRentalRepository @Inject constructor() : RentalRepository {
         rentals[index] = completed
         return Result.success(completed)
     }
-
-    // YENİ EKLENEN KISIM: Fake araç verisi döndüren metod
     override suspend fun getVehicleById(id: String): Result<VehicleResponseDto> {
         delay(FAKE_DELAY_MS)
         // Fake olduğu için ekranda güzel duracak sabit bir araç modeli dönüyoruz
