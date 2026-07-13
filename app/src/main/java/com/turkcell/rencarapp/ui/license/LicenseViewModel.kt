@@ -31,6 +31,7 @@ class LicenseViewModel @Inject constructor(
     private val _effect = Channel<LicenseEffect>(Channel.BUFFERED)
     val effect: Flow<LicenseEffect> = _effect.receiveAsFlow()
 
+    private var frontImageBytes: ByteArray? = null
     private var backImageBytes: ByteArray? = null
     private var selfieImageBytes: ByteArray? = null
 
@@ -40,7 +41,8 @@ class LicenseViewModel @Inject constructor(
 
     fun onIntent(intent: LicenseIntent) {
         when (intent) {
-            LicenseIntent.BackClicked -> sendEffect(LicenseEffect.NavigateBack)
+            LicenseIntent.BackClicked -> logoutAndNavigateToLogin()
+            LicenseIntent.UploadFrontClicked -> requestCameraCapture(LicenseImageType.FRONT)
             LicenseIntent.UploadBackClicked -> requestCameraCapture(LicenseImageType.BACK)
             LicenseIntent.UploadSelfieClicked -> requestCameraCapture(LicenseImageType.SELFIE)
             is LicenseIntent.ImageCaptured -> handleImageCaptured(intent.type, intent.bytes)
@@ -60,41 +62,62 @@ class LicenseViewModel @Inject constructor(
 
     private fun applyLicenseInfo(status: LicenseStatus, rejectReason: String?) {
         if (status == LicenseStatus.REJECTED || status == LicenseStatus.NOT_SUBMITTED) {
-            backImageBytes = null
-            selfieImageBytes = null
+            clearCapturedImages()
         }
         _uiState.update {
             when (status) {
                 LicenseStatus.APPROVED -> it.copy(
+                    isFrontUploaded = true,
                     isBackUploaded = true,
                     isSelfieUploaded = true,
                     activeStepIndex = 2,
                     isContinueEnabled = true,
                     rejectReason = null,
+                    frontPreviewBytes = null,
+                    backPreviewBytes = null,
+                    selfiePreviewBytes = null,
                 )
                 LicenseStatus.UNDER_REVIEW -> it.copy(
+                    isFrontUploaded = true,
                     isBackUploaded = true,
                     isSelfieUploaded = true,
                     activeStepIndex = 2,
                     isContinueEnabled = false,
                     rejectReason = null,
+                    frontPreviewBytes = null,
+                    backPreviewBytes = null,
+                    selfiePreviewBytes = null,
                 )
                 LicenseStatus.REJECTED -> it.copy(
+                    isFrontUploaded = false,
                     isBackUploaded = false,
                     isSelfieUploaded = false,
                     activeStepIndex = 0,
                     isContinueEnabled = false,
                     rejectReason = rejectReason,
+                    frontPreviewBytes = null,
+                    backPreviewBytes = null,
+                    selfiePreviewBytes = null,
                 )
                 LicenseStatus.NOT_SUBMITTED -> it.copy(
+                    isFrontUploaded = false,
                     isBackUploaded = false,
                     isSelfieUploaded = false,
                     activeStepIndex = 0,
                     isContinueEnabled = false,
                     rejectReason = null,
+                    frontPreviewBytes = null,
+                    backPreviewBytes = null,
+                    selfiePreviewBytes = null,
                 )
             }
         }
+    }
+
+    private fun clearCapturedImages() {
+        frontImageBytes = null
+        backImageBytes = null
+        selfieImageBytes = null
     }
 
     private fun requestCameraCapture(type: LicenseImageType) {
@@ -102,8 +125,12 @@ class LicenseViewModel @Inject constructor(
         if (state.isLoading) return
 
         when (type) {
+            LicenseImageType.FRONT -> {
+                if (state.isFrontUploaded) return
+                sendEffect(LicenseEffect.LaunchCamera(LicenseImageType.FRONT))
+            }
             LicenseImageType.BACK -> {
-                if (state.isBackUploaded) return
+                if (!state.isFrontUploaded || state.isBackUploaded) return
                 sendEffect(LicenseEffect.LaunchCamera(LicenseImageType.BACK))
             }
             LicenseImageType.SELFIE -> {
@@ -120,28 +147,39 @@ class LicenseViewModel @Inject constructor(
         }
 
         when (type) {
+            LicenseImageType.FRONT -> {
+                frontImageBytes = bytes
+                _uiState.update {
+                    it.copy(
+                        isFrontUploaded = true,
+                        frontPreviewBytes = bytes,
+                    )
+                }
+            }
             LicenseImageType.BACK -> {
                 backImageBytes = bytes
                 _uiState.update {
                     it.copy(
                         isBackUploaded = true,
+                        backPreviewBytes = bytes,
                         activeStepIndex = 1,
                     )
                 }
             }
             LicenseImageType.SELFIE -> {
                 selfieImageBytes = bytes
-                _uiState.update { it.copy(isSelfieUploaded = true) }
+                _uiState.update { it.copy(isSelfieUploaded = true, selfiePreviewBytes = bytes) }
                 uploadDocuments()
             }
         }
     }
 
     private fun uploadDocuments() {
+        val frontBytes = frontImageBytes
         val backBytes = backImageBytes
         val selfieBytes = selfieImageBytes
-        if (backBytes == null || selfieBytes == null) {
-            sendEffect(LicenseEffect.ShowError("Önce ehliyet arka yüzü ve selfie çekilmelidir."))
+        if (frontBytes == null || backBytes == null || selfieBytes == null) {
+            sendEffect(LicenseEffect.ShowError("Önce ehliyet ön yüzü, arka yüzü ve selfie çekilmelidir."))
             return
         }
         if (_uiState.value.isLoading) return
@@ -149,7 +187,7 @@ class LicenseViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = licenseRepository.upload(
-                frontImageBytes = STUB_FRONT_IMAGE_BYTES,
+                frontImageBytes = frontBytes,
                 backImageBytes = backBytes,
                 selfieImageBytes = selfieBytes,
             )
@@ -168,9 +206,25 @@ class LicenseViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     selfieImageBytes = null
-                    _uiState.update { it.copy(isSelfieUploaded = false) }
+                    _uiState.update {
+                        it.copy(
+                            isSelfieUploaded = false,
+                            selfiePreviewBytes = null,
+                        )
+                    }
                     sendEffect(LicenseEffect.ShowError(error.message ?: "Ehliyet yüklenemedi."))
                 }
+        }
+    }
+
+    private fun logoutAndNavigateToLogin() {
+        if (_uiState.value.isLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            authRepository.logout()
+            _uiState.update { it.copy(isLoading = false) }
+            sendEffect(LicenseEffect.NavigateToLogin)
         }
     }
 
@@ -212,9 +266,5 @@ class LicenseViewModel @Inject constructor(
         viewModelScope.launch {
             _effect.send(effect)
         }
-    }
-
-    private companion object {
-        val STUB_FRONT_IMAGE_BYTES = byteArrayOf(1)
     }
 }

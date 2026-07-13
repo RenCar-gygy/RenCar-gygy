@@ -127,8 +127,15 @@ fun RenCarNavHost(
                 composable(RenCarDestination.Register) {
                     RegisterRoute(
                         onNavigateBack = { navController.popBackStack() },
-                        onNavigateToOtp = { phone ->
-                            navController.navigate(RenCarDestination.otpRoute(phone)) {
+                        onNavigateToLicense = {
+                            navController.navigate(RenCarDestination.License) {
+                                popUpTo(RenCarDestination.Register) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToMain = {
+                            navController.navigate(RenCarDestination.Map) {
+                                popUpTo(RenCarDestination.AuthGraph) { inclusive = true }
                                 launchSingleTop = true
                             }
                         },
@@ -168,7 +175,12 @@ fun RenCarNavHost(
                 }
                 composable(RenCarDestination.License) {
                     LicenseRoute(
-                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToLogin = {
+                            navController.navigate(RenCarDestination.Login) {
+                                popUpTo(RenCarDestination.AuthGraph) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
                         onNavigateToMain = {
                             navController.navigate(RenCarDestination.Map) {
                                 popUpTo(RenCarDestination.AuthGraph) { inclusive = true }
