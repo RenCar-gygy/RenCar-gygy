@@ -4,6 +4,7 @@ import com.turkcell.rencarapp.data.auth.AuthorizedRequestExecutor
 import com.turkcell.rencarapp.data.network.api.RentalApi
 import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
+import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,6 +41,12 @@ class DefaultRentalRepository @Inject constructor(
             rentalApi.returnRental(authorization = authorization, id = id).toDomain()
         }
 
+    // YENİ EKLENEN KISIM: Araç detaylarını getiren metod
+    override suspend fun getVehicleById(id: String): Result<VehicleResponseDto> =
+        authorizedCall { authorization ->
+            rentalApi.getVehicleById(authorization = authorization, id = id)
+        }
+
     private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> =
         authorizedRequestExecutor.execute(block)
 
@@ -59,6 +66,7 @@ class DefaultRentalRepository @Inject constructor(
             RentalStatus.ACTIVE.name -> RentalStatus.ACTIVE
             RentalStatus.COMPLETED.name -> RentalStatus.COMPLETED
             RentalStatus.CANCELLED.name -> RentalStatus.CANCELLED
+            RentalStatus.PREPARING.name -> RentalStatus.PREPARING // DTO'nda bu da vardı, eklemekte fayda var
             else -> RentalStatus.ACTIVE
         }
 }

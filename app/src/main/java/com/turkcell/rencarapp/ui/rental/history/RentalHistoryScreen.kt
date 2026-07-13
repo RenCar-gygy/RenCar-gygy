@@ -2,6 +2,7 @@ package com.turkcell.rencarapp.ui.rental.history
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,12 +21,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
@@ -63,55 +61,53 @@ fun RentalHistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding() // 🚀 EKLENDİ: Üst saat/şarj çubuğuyla çakışmayı önler
+            .statusBarsPadding()
     ) {
-        // --- BAŞLIK ALANI (Daha aşağıda, Premium ve Dengeli) ---
+        // --- BAŞLIK ALANI ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // Tamamı büyük harf yerine daha elegant bir kullanım
             Text(
-                text = "KİRALAMALARIM",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Black, // Daha premium bir kalınlık
-                    fontSize = 32.sp,
-                    fontFamily = FontFamily.Default // 🚀 EKLENDİ: Mac/iOS uyumu
+                text = "Kiralamalarım",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold
                 ),
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // İstatistik Alanı (Daha şık ve okunabilir)
+            // İstatistik Alanı (Daha zarif)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.DirectionsCar,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "${state.monthlyTripCount} Yolculuk • ₺${state.monthlyTotalSpent} Toplam Harcama",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                    text = "${state.monthlyTripCount} Yolculuk • ₺${state.monthlyTotalSpent} Toplam",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Medium
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // --- LİSTE ALANI ---
         if (state.isLoading) {
@@ -120,7 +116,7 @@ fun RentalHistoryScreen(
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 40.dp)
             ) {
                 items(state.rentals) { rental ->
@@ -139,18 +135,21 @@ fun RentalHistoryCard(
     model: RentalUiModel,
     onClick: () -> Unit
 ) {
-    // Ultra modern, gölgeli ve pürüzsüz kart tasarımı
+    // Elegant, modern ve düz (flat) kart tasarımı
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(16.dp)) // 24.dp fazla yuvarlaktı, 16 daha profesyonel durur
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp, // Premium bir havada asılı durma hissi
-            pressedElevation = 2.dp
+            defaultElevation = 0.dp // Modern tasarımda gölge yerine hafif border tercih edilir
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
         )
     ) {
         Row(
@@ -159,85 +158,72 @@ fun RentalHistoryCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- HARİTA / İKON ALANI (Sol Taraf - Gradient Modernizasyonu) ---
+            // --- İKON ALANI ---
             Box(
                 modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                            )
-                        )
-                    ),
+                    .size(52.dp) // 68.dp çok büyüktü, 52.dp daha orantılı
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Map,
                     contentDescription = "Harita",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // --- BİLGİ ALANI (Orta Kısım) ---
+            // --- BİLGİ ALANI ---
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = model.vehicleName,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
                     ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = model.dateText,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = FontFamily.Default // 🚀 EKLENDİ
-                    ),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Süre ve Mesafe Chip'leri (Hap tasarımı)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     InfoChip(text = model.durationText)
                     InfoChip(text = model.distanceText)
                 }
             }
 
-            // --- FİYAT VE OK ALANI (Sağ Taraf) ---
+            // --- FİYAT ALANI ---
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = model.priceText,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Black,
-                        fontFamily = FontFamily.Default // 🚀 EKLENDİ
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Tıklanabilir hissini artıran modern sağ ok
                 Icon(
                     imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = "Detaya Git",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -245,21 +231,19 @@ fun RentalHistoryCard(
     }
 }
 
-// Ultra Modern Chip (Hap) Tasarımı (iOS/Android Uyumlu)
 @Composable
 fun InfoChip(text: String) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
         shape = CircleShape
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Default // 🚀 EKLENDİ
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold
             ),
             color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp) // İç boşluklar mükemmelleştirildi
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp) // Daha zarif bir hap boyutu
         )
     }
 }

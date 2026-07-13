@@ -42,6 +42,8 @@ class RentalSummaryViewModel @Inject constructor(
         if (rentalId == null) return
 
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) } // Yükleniyor animasyonunu başlat
+
             val result = rentalRepository.getById(rentalId)
 
             result.onSuccess { rental ->
@@ -50,10 +52,15 @@ class RentalSummaryViewModel @Inject constructor(
                 val serviceFee = total * 0.10
                 val rentalFee = total - serviceFee
 
+                // YENİ: Fake veriler yerine gerçek araç bilgilerini API'den çekiyoruz
+                val vehicleResult = rentalRepository.getVehicleById(rental.vehicleId)
+                val vehicle = vehicleResult.getOrNull()
+
                 _uiState.update { state ->
                     state.copy(
-                        vehicleName = "Araç ${rental.vehicleId.take(4).uppercase()}",
-                        plate = "34 RNT ${rental.vehicleId.take(2).uppercase()}",
+                        isLoading = false,
+                        vehicleName = vehicle?.let { "${it.brand} ${it.model}" } ?: "Araç Bulunamadı",
+                        plate = vehicle?.plate ?: "Plaka Yok",
                         durationText = "$durationMinutes dakika",
                         distanceText = "12.4 km",
                         rentalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rentalFee),
@@ -64,6 +71,7 @@ class RentalSummaryViewModel @Inject constructor(
                     )
                 }
             }.onFailure { error ->
+                _uiState.update { it.copy(isLoading = false) }
                 _effect.send(RentalSummaryEffect.ShowError(error.message ?: "Fatura bilgileri alınamadı."))
             }
         }
