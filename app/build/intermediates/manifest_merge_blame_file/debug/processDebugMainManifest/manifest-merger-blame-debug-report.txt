@@ -1,0 +1,215 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.turkcell.rencarapp"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+7-->INJECTED
+8        android:minSdkVersion="26"
+8-->INJECTED
+9        android:targetSdkVersion="37" />
+9-->INJECTED
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:5:5-67
+11-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:5:22-64
+12    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+12-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:6:5-81
+12-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:6:22-78
+13    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+13-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:7:5-79
+13-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:7:22-76
+14
+15    <!-- OpenGL ES 3.0 required -->
+16    <uses-feature
+16-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:7:5-9:35
+17        android:glEsVersion="0x00030000"
+17-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:8:9-41
+18        android:required="true" />
+18-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:9:9-32
+19    <uses-feature
+19-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:10:5-12:36
+20        android:name="android.hardware.wifi"
+20-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:11:9-45
+21        android:required="false" />
+21-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:12:9-33
+22
+23    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+23-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:14:5-79
+23-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:14:22-76
+24    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+24-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:15:5-76
+24-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4710926b4f6296230bb02df3ffd8803f\transformed\android-sdk-11.8.0\AndroidManifest.xml:15:22-73
+25
+26    <permission
+26-->[androidx.core:core:1.19.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\dd5f52eefc0f52fe402c109407ea4850\transformed\core-1.19.0\AndroidManifest.xml:22:5-24:47
+27        android:name="com.turkcell.rencarapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+27-->[androidx.core:core:1.19.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\dd5f52eefc0f52fe402c109407ea4850\transformed\core-1.19.0\AndroidManifest.xml:23:9-81
+28        android:protectionLevel="signature" />
+28-->[androidx.core:core:1.19.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\dd5f52eefc0f52fe402c109407ea4850\transformed\core-1.19.0\AndroidManifest.xml:24:9-44
+29
+30    <uses-permission android:name="com.turkcell.rencarapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+30-->[androidx.core:core:1.19.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\dd5f52eefc0f52fe402c109407ea4850\transformed\core-1.19.0\AndroidManifest.xml:26:5-97
+30-->[androidx.core:core:1.19.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\dd5f52eefc0f52fe402c109407ea4850\transformed\core-1.19.0\AndroidManifest.xml:26:22-94
+31
+32    <application
+32-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:9:5-31:19
+33        android:name="com.turkcell.rencarapp.RenCarApplication"
+33-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:10:9-42
+34        android:allowBackup="true"
+34-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:11:9-35
+35        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+35-->[androidx.core:core:1.19.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\dd5f52eefc0f52fe402c109407ea4850\transformed\core-1.19.0\AndroidManifest.xml:28:18-86
+36        android:dataExtractionRules="@xml/data_extraction_rules"
+36-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:12:9-65
+37        android:debuggable="true"
+38        android:extractNativeLibs="false"
+38-->INJECTED
+39        android:fullBackupContent="@xml/backup_rules"
+39-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:13:9-54
+40        android:icon="@mipmap/ic_launcher"
+40-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:14:9-43
+41        android:label="@string/app_name"
+41-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:15:9-41
+42        android:roundIcon="@mipmap/ic_launcher_round"
+42-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:16:9-54
+43        android:supportsRtl="true"
+43-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:17:9-35
+44        android:testOnly="true"
+45        android:theme="@style/Theme.RenCarApp" >
+45-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:18:9-47
+46        <activity
+46-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:19:9-30:20
+47            android:name="com.turkcell.rencarapp.MainActivity"
+47-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:20:13-41
+48            android:exported="true"
+48-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:21:13-36
+49            android:label="@string/app_name"
+49-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:22:13-45
+50            android:theme="@style/Theme.RenCarApp"
+50-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:23:13-51
+51            android:windowSoftInputMode="adjustResize" >
+51-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:24:13-55
+52            <intent-filter>
+52-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:25:13-29:29
+53                <action android:name="android.intent.action.MAIN" />
+53-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:26:17-69
+53-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:26:25-66
+54
+55                <category android:name="android.intent.category.LAUNCHER" />
+55-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:28:17-77
+55-->C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\AndroidManifest.xml:28:27-74
+56            </intent-filter>
+57        </activity>
+58        <activity
+58-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\42b79e4c19cda288012a290f5fa09bd3\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
+59            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+59-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\42b79e4c19cda288012a290f5fa09bd3\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:19-85
+60            android:exported="false"
+60-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\42b79e4c19cda288012a290f5fa09bd3\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:146-170
+61            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+61-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\42b79e4c19cda288012a290f5fa09bd3\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:86-145
+62        <activity
+62-->[androidx.compose.ui:ui-test-manifest:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\d4b0fd531a4bfa8ad4e824f58eed638f\transformed\ui-test-manifest-1.11.0\AndroidManifest.xml:23:9-26:79
+63            android:name="androidx.activity.ComponentActivity"
+63-->[androidx.compose.ui:ui-test-manifest:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\d4b0fd531a4bfa8ad4e824f58eed638f\transformed\ui-test-manifest-1.11.0\AndroidManifest.xml:24:13-63
+64            android:exported="true"
+64-->[androidx.compose.ui:ui-test-manifest:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\d4b0fd531a4bfa8ad4e824f58eed638f\transformed\ui-test-manifest-1.11.0\AndroidManifest.xml:25:13-36
+65            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+65-->[androidx.compose.ui:ui-test-manifest:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\d4b0fd531a4bfa8ad4e824f58eed638f\transformed\ui-test-manifest-1.11.0\AndroidManifest.xml:26:13-76
+66        <activity
+66-->[androidx.compose.ui:ui-tooling-android:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\58fa6631e1d1872c38fe789753f77cf2\transformed\ui-tooling\AndroidManifest.xml:23:9-25:39
+67            android:name="androidx.compose.ui.tooling.PreviewActivity"
+67-->[androidx.compose.ui:ui-tooling-android:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\58fa6631e1d1872c38fe789753f77cf2\transformed\ui-tooling\AndroidManifest.xml:24:13-71
+68            android:exported="true" />
+68-->[androidx.compose.ui:ui-tooling-android:1.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\58fa6631e1d1872c38fe789753f77cf2\transformed\ui-tooling\AndroidManifest.xml:25:13-36
+69
+70        <provider
+70-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
+71            android:name="androidx.startup.InitializationProvider"
+71-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
+72            android:authorities="com.turkcell.rencarapp.androidx-startup"
+72-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
+73            android:exported="false" >
+73-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
+74            <meta-data
+74-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
+75                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+75-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
+76                android:value="androidx.startup" />
+76-->[androidx.emoji2:emoji2:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\39bc06a8f1a4b986d5612bcd8b627a98\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
+77            <meta-data
+77-->[androidx.lifecycle:lifecycle-process:2.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\68d5b0ade32231594eb3b13b0b58edd9\transformed\lifecycle-process-2.11.0\AndroidManifest.xml:29:13-31:52
+78                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+78-->[androidx.lifecycle:lifecycle-process:2.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\68d5b0ade32231594eb3b13b0b58edd9\transformed\lifecycle-process-2.11.0\AndroidManifest.xml:30:17-78
+79                android:value="androidx.startup" />
+79-->[androidx.lifecycle:lifecycle-process:2.11.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\68d5b0ade32231594eb3b13b0b58edd9\transformed\lifecycle-process-2.11.0\AndroidManifest.xml:31:17-49
+80            <meta-data
+80-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+81                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+81-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+82                android:value="androidx.startup" />
+82-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+83        </provider>
+84
+85        <uses-library
+85-->[androidx.window:window:1.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4e884d4b2b72a03cf67bac5e39807416\transformed\window-1.5.0\AndroidManifest.xml:23:9-25:40
+86            android:name="androidx.window.extensions"
+86-->[androidx.window:window:1.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4e884d4b2b72a03cf67bac5e39807416\transformed\window-1.5.0\AndroidManifest.xml:24:13-54
+87            android:required="false" />
+87-->[androidx.window:window:1.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4e884d4b2b72a03cf67bac5e39807416\transformed\window-1.5.0\AndroidManifest.xml:25:13-37
+88        <uses-library
+88-->[androidx.window:window:1.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4e884d4b2b72a03cf67bac5e39807416\transformed\window-1.5.0\AndroidManifest.xml:26:9-28:40
+89            android:name="androidx.window.sidecar"
+89-->[androidx.window:window:1.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4e884d4b2b72a03cf67bac5e39807416\transformed\window-1.5.0\AndroidManifest.xml:27:13-51
+90            android:required="false" />
+90-->[androidx.window:window:1.5.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\4e884d4b2b72a03cf67bac5e39807416\transformed\window-1.5.0\AndroidManifest.xml:28:13-37
+91
+92        <meta-data
+92-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\0af288b02f4b5fe6a56121d081ab2843\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+93            android:name="com.google.android.gms.version"
+93-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\0af288b02f4b5fe6a56121d081ab2843\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+94            android:value="@integer/google_play_services_version" />
+94-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\0af288b02f4b5fe6a56121d081ab2843\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+95
+96        <receiver
+96-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+97            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+97-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+98            android:directBootAware="false"
+98-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+99            android:enabled="true"
+99-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+100            android:exported="true"
+100-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+101            android:permission="android.permission.DUMP" >
+101-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+102            <intent-filter>
+102-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+103                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+103-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+103-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+104            </intent-filter>
+105            <intent-filter>
+105-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+106                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+107            </intent-filter>
+108            <intent-filter>
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+109                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+109-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+109-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+110            </intent-filter>
+111            <intent-filter>
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+112                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+112-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+112-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\sfthz\.gradle\caches\9.6.0\transforms\15f9ee2bf08ceb29d5f1dfdc1ab806d4\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+113            </intent-filter>
+114        </receiver>
+115    </application>
+116
+117</manifest>

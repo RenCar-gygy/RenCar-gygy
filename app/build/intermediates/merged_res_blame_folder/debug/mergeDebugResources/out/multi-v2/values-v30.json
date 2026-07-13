@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.turkcell.rencarapp-mergeDebugResources-53:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\sfthz\\.gradle\\caches\\9.6.0\\transforms\\32e7a72cc6a81770bfea62971f538efe\\transformed\\material3\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

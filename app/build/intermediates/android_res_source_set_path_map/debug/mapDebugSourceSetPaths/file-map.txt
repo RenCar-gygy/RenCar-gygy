@@ -1,0 +1,8 @@
+com.turkcell.rencarapp-pngs-0 C:\Users\sfthz\Desktop\RenCar-gygy\app\build\generated\res\pngs\debug
+com.turkcell.rencarapp-updated_navigation_xml-1 C:\Users\sfthz\Desktop\RenCar-gygy\app\build\generated\updated_navigation_xml\debug
+com.turkcell.rencarapp-packageDebugResources-2 C:\Users\sfthz\Desktop\RenCar-gygy\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.turkcell.rencarapp-packageDebugResources-3 C:\Users\sfthz\Desktop\RenCar-gygy\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.turkcell.rencarapp-debug-4 C:\Users\sfthz\Desktop\RenCar-gygy\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.turkcell.rencarapp-debug-5 C:\Users\sfthz\Desktop\RenCar-gygy\app\src\debug\res
+com.turkcell.rencarapp-main-6 C:\Users\sfthz\Desktop\RenCar-gygy\app\src\main\res
+gradleHome-0 C:\Users\sfthz\.gradle

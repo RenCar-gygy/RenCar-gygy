@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class com.turkcell.rencarapp.ui.auth.login.LoginViewModel
