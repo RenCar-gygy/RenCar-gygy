@@ -32,7 +32,6 @@ class RentalHistoryViewModel @Inject constructor(
     private val _effect = Channel<RentalHistoryEffect>(Channel.BUFFERED)
     val effect: Flow<RentalHistoryEffect> = _effect.receiveAsFlow()
 
-    // Locale kullanımı modern yönteme (forLanguageTag) çevrildi
     private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy - HH:mm", Locale.forLanguageTag("tr-TR"))
         .withZone(ZoneId.systemDefault())
 
@@ -63,9 +62,12 @@ class RentalHistoryViewModel @Inject constructor(
                 val uiModels = rentals.map { rental ->
                     val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
 
+                    // ÇÖZÜM: API'den gelen devasa ID'nin sadece ilk 4 harfini alıp büyütüyoruz
+                    val shortVehicleId = rental.vehicleId.take(4).uppercase()
+
                     RentalUiModel(
                         id = rental.id,
-                        vehicleName = "Araç ${rental.vehicleId}",
+                        vehicleName = "Araç $shortVehicleId", // Artık "Araç 4505" gibi şık duracak
                         dateText = dateFormatter.format(rental.startDate),
                         durationText = "$durationMinutes dk",
                         distanceText = "12,4 km",

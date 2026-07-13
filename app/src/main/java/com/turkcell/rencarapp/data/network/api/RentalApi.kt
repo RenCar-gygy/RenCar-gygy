@@ -8,9 +8,6 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-/**
- * Rental API iskeleti — OpenAPI /rentals uçları.
- */
 interface RentalApi {
 
     @POST("rentals")

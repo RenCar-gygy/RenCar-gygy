@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily // EKLENDİ: Platformlar arası font uyumluluğu için
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +53,7 @@ fun WalletScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding() // EKLENDİ: İçeriğin üstteki saat/şarj çubuğunun altında ezilmesini engeller
             .padding(horizontal = 24.dp),
         contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp)
     ) {
@@ -61,7 +63,8 @@ fun WalletScreen(
                 text = "Cüzdan",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 28.sp
+                    fontSize = 28.sp,
+                    fontFamily = FontFamily.Default // EKLENDİ
                 ),
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -83,12 +86,18 @@ fun WalletScreen(
             ) {
                 Text(
                     text = "Kayıtlı kartlar",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    ),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "+ Ekle",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    ),
                     color = Color(0xFF1E68D7), // Tasarımdaki mavi ton
                     modifier = Modifier.clickable { onIntent(WalletIntent.AddCardClicked) }
                 )
@@ -107,7 +116,10 @@ fun WalletScreen(
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "Son işlemler",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default // EKLENDİ
+                ),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -137,7 +149,9 @@ fun BalanceCard(balance: String, onAddBalance: () -> Unit) {
         Column {
             Text(
                 text = "Rencar bakiyesi",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = FontFamily.Default // EKLENDİ
+                ),
                 color = Color.White.copy(alpha = 0.8f)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -145,7 +159,8 @@ fun BalanceCard(balance: String, onAddBalance: () -> Unit) {
                 text = balance,
                 style = MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 36.sp
+                    fontSize = 36.sp,
+                    fontFamily = FontFamily.Default // EKLENDİ
                 ),
                 color = Color.White
             )
@@ -163,7 +178,10 @@ fun BalanceCard(balance: String, onAddBalance: () -> Unit) {
             ) {
                 Text(
                     text = "+ Bakiye Yükle",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    )
                 )
             }
         }
@@ -201,7 +219,8 @@ fun SavedCardItem(card: CardUiModel, onClick: () -> Unit) {
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 10.sp
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Default // EKLENDİ
                     )
                 )
             }
@@ -209,12 +228,17 @@ fun SavedCardItem(card: CardUiModel, onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "**** ${card.last4}",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Son kullanma ${card.expiry}",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -226,7 +250,10 @@ fun SavedCardItem(card: CardUiModel, onClick: () -> Unit) {
                     Text(
                         text = "Varsayılan",
                         color = Color(0xFF2E7D32),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Default // EKLENDİ
+                        ),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                     )
                 }
@@ -262,25 +289,36 @@ fun TransactionItem(transaction: TransactionUiModel) {
                 Text(
                     text = if (transaction.isIncome) "+" else "-",
                     color = if (transaction.isIncome) Color(0xFF2E7D32) else Color(0xFFC62828),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    )
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = transaction.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = transaction.date,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Default // EKLENDİ
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
                 text = transaction.amount,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Default // EKLENDİ
+                ),
                 color = if (transaction.isIncome) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface
             )
         }

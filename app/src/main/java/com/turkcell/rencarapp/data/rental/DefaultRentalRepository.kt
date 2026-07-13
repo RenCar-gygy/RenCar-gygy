@@ -5,7 +5,6 @@ import com.turkcell.rencarapp.data.network.api.RentalApi
 import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +20,7 @@ class DefaultRentalRepository @Inject constructor(
                 authorization = authorization,
                 body = CreateRentalDto(
                     vehicleId = request.vehicleId,
-                    endDate = request.endDate.toString() // API formatına göre düzenlenebilir
+                    endDate = request.endDate.toString()
                 )
             ).toDomain()
         }

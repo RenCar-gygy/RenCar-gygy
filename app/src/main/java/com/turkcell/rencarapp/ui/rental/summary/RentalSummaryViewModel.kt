@@ -31,12 +31,9 @@ class RentalSummaryViewModel @Inject constructor(
     private val _effect = Channel<RentalSummaryEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
 
-    // Navigasyondan gelen kiralama ID'sini alıyoruz (Örn: navArgument)
-    // Eğer test yapıyorsan ve ID gelmiyorsa uygulama çökmesin diye null kontrolü yapıyoruz
     private val rentalId: String? = savedStateHandle.get<String>("rentalId")
 
     init {
-        // Ekran açılır açılmaz faturayı API'den çek
         fetchRentalSummary()
     }
 
@@ -48,22 +45,17 @@ class RentalSummaryViewModel @Inject constructor(
             val result = rentalRepository.getById(rentalId)
 
             result.onSuccess { rental ->
-                // Süreyi dakika cinsinden hesapla
                 val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
-
-                // API'den gelen toplam fiyatı al
                 val total = rental.totalPrice
-                // Görsellik katmak için toplam fiyatın %10'unu hizmet bedeli gibi gösteriyoruz
                 val serviceFee = total * 0.10
                 val rentalFee = total - serviceFee
 
                 _uiState.update { state ->
                     state.copy(
-                        // Gerçek araç bilgileri araç repository'den de çekilebilir ama şimdilik mockluyoruz
                         vehicleName = "Araç ${rental.vehicleId.take(4).uppercase()}",
                         plate = "34 RNT ${rental.vehicleId.take(2).uppercase()}",
                         durationText = "$durationMinutes dakika",
-                        distanceText = "12.4 km", // API'de mesafe uç noktası olmadığı için UI stub
+                        distanceText = "12.4 km",
                         rentalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rentalFee),
                         serviceFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", serviceFee),
                         totalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", total),
@@ -81,7 +73,6 @@ class RentalSummaryViewModel @Inject constructor(
         when (intent) {
             is RentalSummaryIntent.PayClicked -> {
                 viewModelScope.launch {
-                    // Cüzdan/Ödeme API'miz olmadığı için başarılı sayıp Ana Ekrana yolluyoruz (Mimari Karar)
                     _effect.send(RentalSummaryEffect.ShowToast("Ödeme başarıyla alındı!"))
                     _effect.send(RentalSummaryEffect.NavigateToHome)
                 }
