@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -256,6 +257,28 @@ fun LicenseScreen(
                     colors = colors,
                     onClick = { onIntent(LicenseIntent.UploadBackClicked) },
                 )
+            }
+
+            if (state.isBackUploaded) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Yüz doğrulama (selfie)",
+                    color = colors.sectionTitle,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (state.isSelfieUploaded) {
+                    LicenseSelfiePreview(colors = colors)
+                } else {
+                    LicenseSelfieUploadPlaceholder(
+                        colors = colors,
+                        onClick = { onIntent(LicenseIntent.UploadSelfieClicked) },
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -517,6 +540,75 @@ private fun LicenseBackUploadPlaceholder(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Arka yüzü çek veya yükle",
+                color = colors.uploadText,
+                fontSize = 14.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LicenseSelfiePreview(colors: LicenseColors) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.previewGradientStart),
+        contentAlignment = Alignment.Center,
+    ) {
+        UploadedBadge(modifier = Modifier.align(Alignment.TopEnd).padding(12.dp))
+        Icon(
+            imageVector = Icons.Outlined.Face,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.9f),
+            modifier = Modifier.size(72.dp),
+        )
+    }
+}
+
+@Composable
+private fun LicenseSelfieUploadPlaceholder(
+    colors: LicenseColors,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.uploadBackground)
+            .drawBehind {
+                drawRoundRect(
+                    color = colors.uploadBorder,
+                    style = Stroke(
+                        width = 2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 12f), 0f),
+                    ),
+                    cornerRadius = CornerRadius(16.dp.toPx()),
+                )
+            }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(RenCarBlue),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Face,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Selfie çek veya yükle",
                 color = colors.uploadText,
                 fontSize = 14.sp,
             )

@@ -20,14 +20,14 @@ import javax.inject.Singleton
 /**
  * Sprint 0 ağ katmanı iskeleti.
  *
- * Base URL: https://rencar.halitkalayci.com/ (bkz. docs/decisions.md).
+ * Base URL: https://rencarv2.halitkalayci.com/ (bkz. docs/decisions.md).
  * API arayüzleri Sprint 1'de Default*Repository implementasyonlarında kullanılacaktır.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://rencar.halitkalayci.com/"
+    private const val BASE_URL = "https://rencarv2.halitkalayci.com/"
 
     @Provides
     @Singleton

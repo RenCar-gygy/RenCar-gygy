@@ -15,10 +15,16 @@ class FakeLicenseRepository @Inject constructor() : LicenseRepository {
         return Result.success(LicenseInfo(status = status, rejectReason = rejectReason))
     }
 
-    override suspend fun upload(frontImageBytes: ByteArray, backImageBytes: ByteArray): Result<LicenseInfo> {
+    override suspend fun upload(
+        frontImageBytes: ByteArray,
+        backImageBytes: ByteArray,
+        selfieImageBytes: ByteArray,
+    ): Result<LicenseInfo> {
         delay(FAKE_DELAY_MS)
-        if (frontImageBytes.isEmpty() || backImageBytes.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Ön ve arka ehliyet fotoğrafı zorunludur."))
+        if (frontImageBytes.isEmpty() || backImageBytes.isEmpty() || selfieImageBytes.isEmpty()) {
+            return Result.failure(
+                IllegalArgumentException("Ön, arka ehliyet ve selfie fotoğrafı zorunludur."),
+            )
         }
         status = LicenseStatus.APPROVED
         rejectReason = null

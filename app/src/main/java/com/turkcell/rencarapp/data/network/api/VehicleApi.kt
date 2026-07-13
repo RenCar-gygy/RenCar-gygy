@@ -8,7 +8,7 @@ import retrofit2.http.Query
 
 /**
  * Vehicle API — OpenAPI /vehicles uçları.
- * Tek kaynak: https://rencar.halitkalayci.com/api/openapi.json
+ * Tek kaynak: https://rencarv2.halitkalayci.com/api/openapi.json
  */
 interface VehicleApi {
 
@@ -16,8 +16,10 @@ interface VehicleApi {
     suspend fun listAvailable(
         @Header("Authorization") authorization: String,
         @Query("type") type: String? = null,
+        @Query("segment") segment: String? = null,
         @Query("page") page: Int? = null,
         @Query("limit") limit: Int? = null,
+        @Query("includeBusy") includeBusy: String? = null,
     ): List<VehicleResponseDto>
 
     @GET("vehicles/{id}")

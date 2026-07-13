@@ -4,6 +4,7 @@ data class LicenseUiState(
     val activeStepIndex: Int = 0,
     val isFrontUploaded: Boolean = true,
     val isBackUploaded: Boolean = false,
+    val isSelfieUploaded: Boolean = false,
     val isContinueEnabled: Boolean = false,
     val isLoading: Boolean = false,
     val rejectReason: String? = null,
@@ -12,6 +13,7 @@ data class LicenseUiState(
 sealed interface LicenseIntent {
     data object BackClicked : LicenseIntent
     data object UploadBackClicked : LicenseIntent
+    data object UploadSelfieClicked : LicenseIntent
     data object ContinueClicked : LicenseIntent
 }
 

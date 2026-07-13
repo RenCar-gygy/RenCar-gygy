@@ -4,11 +4,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * API yalnızca [Vehicle.pricePerDay] döner ("Günlük kira ücreti").
- * Kiralama toplamı sunucuda `gün × pricePerDay` ile hesaplanır ([RentalResponseDto.totalPrice]).
- *
- * Saatlik/dakikalık etiketler API'de yok; takvim günü (24 saat) üzerinden türetilir.
- * Dakikalık/saatlik kiralama planları UI stub'tır; gerçek ücret API'da günlük bazlıdır.
+ * v2 API doğrudan [Vehicle.pricePerMinute] ve [Vehicle.pricePerHour] döner.
+ * Geriye dönük yardımcılar günlük fiyattan türetim için korunur.
  */
 object VehiclePriceFormatter {
 
@@ -19,11 +16,21 @@ object VehiclePriceFormatter {
 
     fun minutelyPrice(pricePerDay: Double): Double = hourlyPrice(pricePerDay) / MINUTES_PER_HOUR
 
-    /** Harita pini için kısa saatlik fiyat etiketi (ör. ₺63). */
+    fun mapPinLabel(vehicle: Vehicle): String {
+        val hourly = vehicle.pricePerHour.roundToInt().coerceAtLeast(1)
+        return "₺$hourly"
+    }
+
     fun mapPinLabel(pricePerDay: Double): String {
         val hourly = hourlyPrice(pricePerDay).roundToInt().coerceAtLeast(1)
         return "₺$hourly"
     }
+
+    fun hourlyLabel(vehicle: Vehicle): String =
+        "₺${formatAmount(vehicle.pricePerHour)}/sa"
+
+    fun minutelyLabel(vehicle: Vehicle): String =
+        "₺${formatAmount(vehicle.pricePerMinute)}/dk"
 
     fun hourlyLabel(pricePerDay: Double): String =
         "₺${formatAmount(hourlyPrice(pricePerDay))}/sa"

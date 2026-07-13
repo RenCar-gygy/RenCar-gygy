@@ -7,7 +7,8 @@ data class RegisterDto(
     val email: String,
     val password: String,
     val fullName: String,
-    val phone: String? = null,
+    val phone: String,
+    val referralCode: String? = null,
 )
 
 @Serializable
@@ -35,6 +36,9 @@ data class UserResponseDto(
     val fullName: String,
     val phone: String? = null,
     val role: String,
+    val referralCode: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )
 
 @Serializable
@@ -52,7 +56,10 @@ data class RefreshTokenDto(
 @Serializable
 data class LicenseStatusResponseDto(
     val status: String,
+    val frontImageUrl: String? = null,
+    val backImageUrl: String? = null,
     val rejectReason: String? = null,
+    val reviewedAt: String? = null,
 )
 
 @Serializable
@@ -63,9 +70,18 @@ data class VehicleResponseDto(
     val model: String,
     val type: String,
     val pricePerDay: Double,
+    val pricePerMinute: Double,
+    val pricePerHour: Double,
+    val fuelPercent: Int,
+    val rangeKm: Int,
+    val transmission: String,
+    val seats: Int,
+    val segment: String,
     val status: String,
     val latitude: Double,
     val longitude: Double,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )
 
 @Serializable

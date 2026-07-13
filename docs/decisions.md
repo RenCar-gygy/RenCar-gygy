@@ -78,11 +78,13 @@
 
 ### Backend API
 
-- Base URL: **`https://rencar.halitkalayci.com/`**
-- OpenAPI: **`/api/docs`** (JSON: `/api/docs-json`)
-- Son Güncelleme Tarihi: 02.07.2026
+- Base URL: **`https://rencarv2.halitkalayci.com/`** (v2 — eğitmen yayını, 12.07.2026)
+- OpenAPI UI: **`/api/docs`**
+- OpenAPI JSON: **`/api/openapi.json`** (yerel kopya: `docs/api/openapi-v2.json`)
+- Eski v1 (`https://rencar.halitkalayci.com/`) kullanımdan kalkıyor; yeni geliştirme v2 üzerinden yapılır.
+- Son Güncelleme Tarihi: 13.07.2026
 - Kimlik doğrulama: JWT Bearer (`accessToken` + `refreshToken` rotation)
-- Müşteri uçları: Auth, License, Vehicles (AVAILABLE), Rentals
+- Müşteri uçları (v2): Auth, License, Vehicles, Reservations, Rentals, Cards, Wallet
 - Admin uçları mobil kapsam dışıdır
 
 ---
@@ -288,3 +290,16 @@
 - Son Güncelleme Tarihi: 09.07.2026
 - Mevcut kategori çipleri (Tümü / Ekonomik / Konfor / SUV) ve “yalnızca müsait” switch'i korunur; tip filtresi bunların üzerine ek istemci filtresi olarak çalışır.
 - API `GET /vehicles` tek `type` query parametresi desteklediği için çoklu tip seçiminde önce kategori kaynağından liste alınır, ardından `selectedVehicleTypes` ile süzülür.
+
+---
+
+### API v2 — Furkan ekranları (auth-map-api)
+
+- Karar: Eğitmen v2 API'sine geçiş; Furkan sorumluluğundaki Auth/License/Harita katmanları hizalanır.
+- Son Güncelleme Tarihi: 13.07.2026
+- **Ağ:** `NetworkModule` base URL `rencarv2`; OpenAPI JSON `/api/openapi.json`
+- **Vehicle DTO/domain:** `pricePerMinute`, `pricePerHour`, `segment`, `RESERVED` status eklendi
+- **Harita:** Kategori sekmeleri `?segment=` query ile API'den filtrelenir; `includeBusy=true` ile RENTED/RESERVED pinler gri gösterilir; pin fiyatı `pricePerHour` kullanır
+- **License:** `POST /license/upload` artık `selfie` multipart alanı zorunlu (stub PNG ile gönderilir)
+- **Auth DTO:** `RegisterDto.phone` zorunlu; `referralCode` opsiyonel
+- **Sonraki batch:** License selfie gerçek kamera entegrasyonu
