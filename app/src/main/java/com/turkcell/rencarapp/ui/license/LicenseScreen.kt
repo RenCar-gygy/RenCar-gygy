@@ -1,6 +1,10 @@
 package com.turkcell.rencarapp.ui.license
 
+import android.Manifest
+import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,10 +38,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import java.io.ByteArrayOutputStream
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -154,12 +162,55 @@ fun LicenseRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var pendingCaptureType by remember { mutableStateOf<LicenseImageType?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview(),
+    ) { bitmap ->
+        val captureType = pendingCaptureType
+        pendingCaptureType = null
+        if (bitmap != null && captureType != null) {
+            viewModel.onIntent(
+                LicenseIntent.ImageCaptured(
+                    type = captureType,
+                    bytes = bitmap.toPngByteArray(),
+                ),
+            )
+        } else if (captureType != null) {
+            Toast.makeText(context, "Fotoğraf çekilmedi.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            cameraLauncher.launch(null)
+        } else {
+            pendingCaptureType = null
+            Toast.makeText(context, "Kamera izni gerekli.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun launchCamera() {
+        when {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                cameraLauncher.launch(null)
+            }
+            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 LicenseEffect.NavigateBack -> onNavigateBack()
                 LicenseEffect.NavigateToMain -> onNavigateToMain()
+                is LicenseEffect.LaunchCamera -> {
+                    pendingCaptureType = effect.type
+                    launchCamera()
+                }
                 is LicenseEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
                 }
@@ -172,6 +223,12 @@ fun LicenseRoute(
         onIntent = viewModel::onIntent,
         modifier = modifier,
     )
+}
+
+private fun Bitmap.toPngByteArray(): ByteArray {
+    val stream = ByteArrayOutputStream()
+    compress(Bitmap.CompressFormat.PNG, 100, stream)
+    return stream.toByteArray()
 }
 
 @Composable
