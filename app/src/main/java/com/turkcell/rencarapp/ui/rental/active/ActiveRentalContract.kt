@@ -9,7 +9,9 @@ data class ActiveRentalUiState(
     val distance: String = "0,0 km",
     val isLocked: Boolean = true,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val remainingReservationSeconds: Int? = null,
+    val isReservationActive: Boolean = false
 )
 
 sealed interface ActiveRentalIntent {

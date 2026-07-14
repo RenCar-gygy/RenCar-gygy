@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleDistanceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class VehicleDetailViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val reservationRepository: ReservationRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -50,14 +52,37 @@ class VehicleDetailViewModel @Inject constructor(
             is VehicleDetailIntent.BackClicked -> {
                 viewModelScope.launch { _effect.send(VehicleDetailEffect.NavigateBack) }
             }
-            is VehicleDetailIntent.ReserveClicked -> {
-                viewModelScope.launch {
-                    _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId))
-                }
-            }
+            is VehicleDetailIntent.ReserveClicked -> reserveVehicle()
+            is VehicleDetailIntent.PlanChanged -> loadQuote(intent.plan, intent.minutes)
             is VehicleDetailIntent.UnlockClicked -> {
                 // UI'dan kaldırıldı, artık işlevsiz.
             }
+        }
+    }
+
+    private fun reserveVehicle() {
+        if (_uiState.value.isReserving) return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isReserving = true) }
+            reservationRepository.create(vehicleId)
+                .onSuccess {
+                    _uiState.update { it.copy(isReserving = false) }
+                    _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId))
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isReserving = false) }
+                    _effect.send(VehicleDetailEffect.ShowMessage(error.message ?: "Rezervasyon başarısız."))
+                }
+        }
+    }
+
+    private fun loadQuote(plan: com.turkcell.rencarapp.data.network.dto.RentalPlan, minutes: Int) {
+        viewModelScope.launch {
+            vehicleRepository.getQuote(vehicleId, plan, minutes)
+                .onSuccess { quote ->
+                    _uiState.update { it.copy(estimatedPrice = "₺${quote.estimatedTotal}") }
+                }
         }
     }
 
@@ -101,6 +126,9 @@ class VehicleDetailViewModel @Inject constructor(
                             isLoading = false
                         ) 
                     }
+                    
+                    // Varsayılan quote yükle
+                    loadQuote(com.turkcell.rencarapp.data.network.dto.RentalPlan.PER_MINUTE, 30)
                 }
                 .onFailure { exception ->
                     _uiState.update { 

@@ -3,6 +3,7 @@ package com.turkcell.rencarapp.data.network
 import com.turkcell.rencarapp.data.network.api.AuthApi
 import com.turkcell.rencarapp.data.network.api.LicenseApi
 import com.turkcell.rencarapp.data.network.api.RentalApi
+import com.turkcell.rencarapp.data.network.api.ReservationApi
 import com.turkcell.rencarapp.data.network.api.VehicleApi
 import dagger.Module
 import dagger.Provides
@@ -76,4 +77,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRentalApi(retrofit: Retrofit): RentalApi = retrofit.create(RentalApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideReservationApi(retrofit: Retrofit): ReservationApi = retrofit.create(ReservationApi::class.java)
 }

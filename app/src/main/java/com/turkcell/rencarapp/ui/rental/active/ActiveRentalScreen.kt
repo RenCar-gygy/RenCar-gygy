@@ -88,11 +88,11 @@ fun ActiveRentalScreen(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(if (state.isLocked) Color(0xFFFFA000) else Color(0xFF4CAF50))
+                        .background(if (state.isReservationActive) Color(0xFFFFA000) else Color(0xFF4CAF50))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (state.isLocked) "Rezervasyon Aktif" else "Kiralama Aktif - ${state.vehicleName}",
+                    text = if (state.isReservationActive) "Rezervasyon Aktif" else "Kiralama Aktif - ${state.vehicleName}",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Medium
@@ -127,7 +127,7 @@ fun ActiveRentalScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = if (state.isLocked) "Kalan Rezervasyon Süresi" else "Geçen Kullanım Süresi",
+                    text = if (state.isReservationActive) "Kalan Rezervasyon Süresi" else "Geçen Kullanım Süresi",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -138,7 +138,7 @@ fun ActiveRentalScreen(
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
-                    color = if (state.isLocked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+                    color = if (state.isReservationActive) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -198,7 +198,10 @@ fun ActiveRentalScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    // Kilit Butonu
+                    // Kilit Butonu (Yalnızca kiralama aktifse veya rezervasyondan kiralama başlatılacaksa anlamlı)
+                    // Ancak v2'de rezervasyon -> kiralama (PREPARING) -> start (ACTIVE) akışı var.
+                    // Bu ekran "Kiralama başladıktan sonraki" ekran ise, isReservationActive false olmalı.
+                    
                     OutlinedButton(
                         onClick = { onIntent(ActiveRentalIntent.ToggleLock) },
                         modifier = Modifier
@@ -208,7 +211,8 @@ fun ActiveRentalScreen(
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        border = BorderStroke(1.dp, if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline)
+                        border = BorderStroke(1.dp, if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline),
+                        enabled = !state.isReservationActive
                     ) {
                         Icon(
                             if (state.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
@@ -234,7 +238,7 @@ fun ActiveRentalScreen(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
                         ),
-                        enabled = !state.isLocked
+                        enabled = !state.isLocked && !state.isReservationActive
                     ) {
                         Text("Kiralamayı Bitir", fontWeight = FontWeight.Bold)
                     }

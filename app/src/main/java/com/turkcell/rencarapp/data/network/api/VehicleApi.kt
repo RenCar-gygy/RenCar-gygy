@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.data.network.api
 
+import com.turkcell.rencarapp.data.network.dto.Quote
 import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -27,4 +28,12 @@ interface VehicleApi {
         @Header("Authorization") authorization: String,
         @Path("id") id: String,
     ): VehicleResponseDto
+
+    @GET("vehicles/{id}/quote")
+    suspend fun getQuote(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Query("plan") plan: String,
+        @Query("minutes") minutes: Int
+    ): Quote
 }

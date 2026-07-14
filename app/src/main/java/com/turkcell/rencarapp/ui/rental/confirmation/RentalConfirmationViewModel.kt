@@ -48,10 +48,8 @@ class RentalConfirmationViewModel @Inject constructor(
                 viewModelScope.launch { _effect.send(RentalConfirmationEffect.NavigateBack) }
             }
             is RentalConfirmationIntent.PlanSelected -> {
-                _uiState.update {
-                    val newState = it.copy(selectedPlan = intent.plan)
-                    calculatePrices(newState)
-                }
+                _uiState.update { it.copy(selectedPlan = intent.plan) }
+                loadQuote()
             }
             is RentalConfirmationIntent.TermsAcceptedChanged -> {
                 _uiState.update { it.copy(isTermsAccepted = intent.accepted) }
@@ -69,15 +67,53 @@ class RentalConfirmationViewModel @Inject constructor(
             vehicleRepository.getById(vehicleId)
                 .onSuccess { vehicle ->
                     _uiState.update {
-                        val newState = it.copy(vehicle = vehicle, isLoading = false)
-                        calculatePrices(newState)
+                        it.copy(
+                            vehicle = vehicle,
+                            isLoading = false,
+                            minutelyPriceLabel = "₺${String.format("%.2f", vehicle.pricePerMinute)}/dk",
+                            hourlyPriceLabel = "₺${String.format("%.2f", vehicle.pricePerHour)}/sa",
+                            dailyPriceLabel = "₺${String.format("%.0f", vehicle.pricePerDay)}/gün"
+                        )
                     }
+                    loadQuote()
                 }
                 .onFailure { exception ->
                     _uiState.update {
                         it.copy(isLoading = false, error = exception.message ?: "Araç bilgileri alınamadı.")
                     }
                     _effect.send(RentalConfirmationEffect.ShowError(exception.message ?: "Hata oluştu."))
+                }
+        }
+    }
+
+    private fun loadQuote() {
+        val state = _uiState.value
+        val plan = when (state.selectedPlan) {
+            RentalPlan.MINUTELY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.PER_MINUTE
+            RentalPlan.HOURLY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.HOURLY
+            RentalPlan.DAILY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.DAILY
+        }
+        val minutes = when (state.selectedPlan) {
+            RentalPlan.MINUTELY -> 30
+            RentalPlan.HOURLY -> 60
+            RentalPlan.DAILY -> 1440
+        }
+
+        viewModelScope.launch {
+            vehicleRepository.getQuote(vehicleId, plan, minutes)
+                .onSuccess { quote ->
+                    _uiState.update {
+                        it.copy(
+                            basePriceLabel = "₺${String.format("%.2f", quote.startFee)}",
+                            serviceFeeLabel = "₺${String.format("%.2f", quote.serviceFee)}",
+                            estimatedPriceLabel = "₺${String.format("%.2f", quote.estimatedTotal)}",
+                            estimatedDuration = when (state.selectedPlan) {
+                                RentalPlan.MINUTELY -> "30 dk"
+                                RentalPlan.HOURLY -> "1 sa"
+                                RentalPlan.DAILY -> "1 gün"
+                            }
+                        )
+                    }
                 }
         }
     }
@@ -95,13 +131,28 @@ class RentalConfirmationViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val endDate = calculateEndDate(_uiState.value.selectedPlan)
-            val request = CreateRentalRequest(vehicleId, endDate)
+            val selectedPlan = _uiState.value.selectedPlan
+            val apiPlan = when (selectedPlan) {
+                RentalPlan.MINUTELY -> com.turkcell.rencarapp.data.rental.RentalPlan.PER_MINUTE
+                RentalPlan.HOURLY -> com.turkcell.rencarapp.data.rental.RentalPlan.HOURLY
+                RentalPlan.DAILY -> com.turkcell.rencarapp.data.rental.RentalPlan.DAILY
+            }
+
+            val endDate = if (selectedPlan == RentalPlan.DAILY) {
+                calculateEndDate(selectedPlan)
+            } else {
+                null
+            }
+
+            val request = CreateRentalRequest(
+                vehicleId = vehicleId,
+                plan = apiPlan,
+                endDate = endDate
+            )
 
             rentalRepository.create(request)
                 .onSuccess { rental ->
                     _uiState.update { it.copy(isLoading = false) }
-                    // Başarıyla kiralandıysa, faturaya değil Aktif Kiralamaya git!
                     _effect.send(RentalConfirmationEffect.NavigateToActiveRental(rental.id))
                 }
                 .onFailure { error ->
@@ -117,44 +168,6 @@ class RentalConfirmationViewModel @Inject constructor(
             RentalPlan.MINUTELY -> now.plus(30, ChronoUnit.MINUTES)
             RentalPlan.HOURLY -> now.plus(1, ChronoUnit.HOURS)
             RentalPlan.DAILY -> now.plus(1, ChronoUnit.DAYS)
-        }
-    }
-
-    private fun calculatePrices(state: RentalConfirmationUiState): RentalConfirmationUiState {
-        val vehicle = state.vehicle ?: return state
-
-        val dailyPrice = vehicle.pricePerDay
-        val hourlyPrice = VehiclePriceFormatter.hourlyPrice(dailyPrice)
-        val minutelyPrice = VehiclePriceFormatter.minutelyPrice(dailyPrice)
-
-        val baseState = state.copy(
-            minutelyPriceLabel = VehiclePriceFormatter.minutelyLabel(dailyPrice),
-            hourlyPriceLabel = VehiclePriceFormatter.hourlyLabel(dailyPrice),
-            dailyPriceLabel = VehiclePriceFormatter.dailyLabel(dailyPrice),
-        )
-
-        return when (state.selectedPlan) {
-            RentalPlan.MINUTELY -> {
-                baseState.copy(
-                    basePrice = "₺15,00",
-                    estimatedDuration = "30 dk",
-                    estimatedPrice = "₺${String.format("%.2f", 15.0 + (minutelyPrice * 30))}"
-                )
-            }
-            RentalPlan.HOURLY -> {
-                baseState.copy(
-                    basePrice = "₺25,00",
-                    estimatedDuration = "1 sa",
-                    estimatedPrice = "₺${String.format("%.2f", 25.0 + hourlyPrice)}"
-                )
-            }
-            RentalPlan.DAILY -> {
-                baseState.copy(
-                    basePrice = "₺0,00",
-                    estimatedDuration = "1 gün",
-                    estimatedPrice = "₺${String.format("%.2f", dailyPrice)}"
-                )
-            }
         }
     }
 }

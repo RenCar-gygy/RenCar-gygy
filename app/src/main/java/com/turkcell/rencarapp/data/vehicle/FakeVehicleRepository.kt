@@ -66,6 +66,25 @@ class FakeVehicleRepository @Inject constructor() : VehicleRepository {
             ?: Result.failure(NoSuchElementException("Araç bulunamadı veya müsait değil."))
     }
 
+    override suspend fun getQuote(
+        id: String,
+        plan: com.turkcell.rencarapp.data.network.dto.RentalPlan,
+        minutes: Int
+    ): Result<com.turkcell.rencarapp.data.network.dto.Quote> {
+        delay(FAKE_DELAY_MS)
+        return Result.success(
+            com.turkcell.rencarapp.data.network.dto.Quote(
+                vehicleId = id,
+                plan = plan,
+                minutes = minutes,
+                usageFee = 135.0,
+                startFee = 15.0,
+                serviceFee = 7.0,
+                estimatedTotal = 157.0
+            )
+        )
+    }
+
     private companion object {
         const val FAKE_DELAY_MS = 400L
     }

@@ -28,6 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+
 @Composable
 fun DeliveryPhotosRoute(
     onNavigateBack: () -> Unit,
@@ -36,6 +42,15 @@ fun DeliveryPhotosRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var selectedDirection by remember { mutableStateOf<PhotoDirection?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null && selectedDirection != null) {
+            viewModel.onIntent(DeliveryPhotosIntent.PhotoCaptured(selectedDirection!!, uri))
+        }
+    }
 
     BackHandler {
         viewModel.onIntent(DeliveryPhotosIntent.BackClicked)
@@ -47,7 +62,7 @@ fun DeliveryPhotosRoute(
                 is DeliveryPhotosEffect.NavigateBack -> onNavigateBack()
                 is DeliveryPhotosEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
                 is DeliveryPhotosEffect.ShowError -> {
-                    Toast.makeText(context, "Bir hata oluştu", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -55,7 +70,15 @@ fun DeliveryPhotosRoute(
 
     DeliveryPhotosScreen(
         state = uiState,
-        onIntent = viewModel::onIntent
+        onIntent = { intent ->
+            if (intent is DeliveryPhotosIntent.PhotoCaptured) {
+                // Bu intent Route içindeki launcher ile yönetilecek
+                selectedDirection = intent.direction
+                photoPickerLauncher.launch("image/*")
+            } else {
+                viewModel.onIntent(intent)
+            }
+        }
     )
 }
 
@@ -192,7 +215,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.FRONT,
                         uri = state.photos[PhotoDirection.FRONT],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.FRONT, Uri.parse("mock_uri")))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.FRONT, Uri.EMPTY))
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -201,7 +224,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.BACK,
                         uri = state.photos[PhotoDirection.BACK],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.BACK, Uri.parse("mock_uri")))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.BACK, Uri.EMPTY))
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -212,7 +235,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.LEFT,
                         uri = state.photos[PhotoDirection.LEFT],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.LEFT, Uri.parse("mock_uri")))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.LEFT, Uri.EMPTY))
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -221,7 +244,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.RIGHT,
                         uri = state.photos[PhotoDirection.RIGHT],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.RIGHT, Uri.parse("mock_uri")))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptured(PhotoDirection.RIGHT, Uri.EMPTY))
                         },
                         modifier = Modifier.weight(1f)
                     )
