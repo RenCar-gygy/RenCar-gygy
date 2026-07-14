@@ -4,10 +4,8 @@ import android.annotation.SuppressLint
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.turkcell.rencarapp.data.rental.Rental
 import com.turkcell.rencarapp.data.rental.RentalRepository
-import com.turkcell.rencarapp.data.vehicle.Vehicle
-import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
+import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -25,42 +23,35 @@ import javax.inject.Inject
 @HiltViewModel
 class ActiveRentalViewModel @Inject constructor(
     private val rentalRepository: RentalRepository,
+    private val reservationRepository: ReservationRepository,
     private val vehicleRepository: VehicleRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val rentalId: String = checkNotNull(savedStateHandle["rentalId"])
+    private val rentalId: String? = savedStateHandle["rentalId"]
 
-    private val _uiState = MutableStateFlow(ActiveRentalUiState(rentalId = rentalId))
+    private val _uiState = MutableStateFlow(ActiveRentalUiState(rentalId = rentalId.orEmpty()))
     val uiState: StateFlow<ActiveRentalUiState> = _uiState.asStateFlow()
 
     private val _effect = Channel<ActiveRentalEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
 
-    private var timerJob: Job? = null
-    private var usageStartTime: Long? = null
+    private var pollingJob: Job? = null
 
     init {
-        onIntent(ActiveRentalIntent.LoadRental)
+        startPolling()
     }
 
     override fun onCleared() {
         super.onCleared()
-        timerJob?.cancel()
+        pollingJob?.cancel()
     }
 
     fun onIntent(intent: ActiveRentalIntent) {
         when (intent) {
-            is ActiveRentalIntent.LoadRental -> loadRental()
+            is ActiveRentalIntent.LoadRental -> startPolling()
             is ActiveRentalIntent.ToggleLock -> {
-                val currentlyLocked = _uiState.value.isLocked
-                if (currentlyLocked && usageStartTime == null) {
-                    // İlk kez kilit açılıyor -> Kullanım başlar ve sayaç sıfırdan saymaya başlar!
-                    usageStartTime = System.currentTimeMillis() / 1000
-                }
-
                 _uiState.update { it.copy(isLocked = !it.isLocked) }
-
                 viewModelScope.launch {
                     val msg = if (_uiState.value.isLocked) "Araç kilitlendi" else "Araç kilidi açıldı, iyi yolculuklar!"
                     _effect.send(ActiveRentalEffect.ShowMessage(msg))
@@ -70,119 +61,72 @@ class ActiveRentalViewModel @Inject constructor(
         }
     }
 
-    private fun loadRental() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            rentalRepository.getById(rentalId)
-                .onSuccess { rental ->
-                    _uiState.update { it.copy(rentalId = rental.id) }
-                    loadVehicle(rental)
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, error = error.message) }
-                    _effect.send(ActiveRentalEffect.ShowMessage(error.message ?: "Kiralama yüklenemedi."))
-                    // Hata olsa bile demo için sayacı başlatalım
-                    startTimer(null, null)
-                }
-        }
-    }
-
-    private fun loadVehicle(rental: Rental) {
-        viewModelScope.launch {
-            vehicleRepository.getById(rental.vehicleId)
-                .onSuccess { vehicle ->
-                    _uiState.update {
-                        it.copy(
-                            vehicleName = "${vehicle.brand} ${vehicle.model}",
-                            vehiclePlate = vehicle.plate,
-                            isLoading = false
-                        )
-                    }
-                    startTimer(rental, vehicle)
-                }
-                .onFailure {
-                    _uiState.update { it.copy(isLoading = false) }
-                    startTimer(rental, null)
-                }
-        }
-    }
-
-    @SuppressLint("NewApi")
-    private fun startTimer(rental: Rental?, vehicle: Vehicle?) {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            val reservationStartSeconds = rental?.startDate?.epochSecond ?: (System.currentTimeMillis() / 1000)
-            val reservationLimitSeconds = reservationStartSeconds + (15 * 60) // 15 dk ücretsiz rezervasyon
-
+    private fun startPolling() {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch {
             while (true) {
-                val nowSeconds = System.currentTimeMillis() / 1000
-                val startOfUsage = usageStartTime
-
-                val durationString: String
-                val currentPrice: String
-                val currentDistance: String
-
-                if (startOfUsage == null) {
-                    // REZERVASYON MODU (Geri Sayım - Ücretsiz)
-                    val remainingSeconds = reservationLimitSeconds - nowSeconds
-                    val absSeconds = kotlin.math.abs(remainingSeconds)
-
-                    val seconds = absSeconds % 60
-                    val minutes = (absSeconds / 60) % 60
-                    val hours = absSeconds / 3600
-
-                    val sign = if (remainingSeconds < 0) "-" else ""
-                    durationString = String.format(Locale.getDefault(), "%s%02d:%02d:%02d", sign, hours, minutes, seconds)
-                    currentPrice = "₺0,00"
-                    currentDistance = "0,0 km"
-                } else {
-                    // KULLANIM MODU (İleri Sayım ve Anlık Ücret Artışı)
-                    val elapsedSeconds = nowSeconds - startOfUsage
-                    val seconds = elapsedSeconds % 60
-                    val minutes = (elapsedSeconds / 60) % 60
-                    val hours = elapsedSeconds / 3600
-
-                    durationString = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
-
-                    val basePrice = 15.0 // Açılış ücreti
-
-                    // EĞER API DEN ARAÇ GELMEZSE BİLE FİYATIN ARTMASI İÇİN YEDEK (FALLBACK) DAKİKA ÜCRETİ: 3.5 TL
-                    val minutelyRate = if (vehicle != null) {
-                        VehiclePriceFormatter.minutelyPrice(vehicle.pricePerDay)
-                    } else {
-                        3.5
+                // 1. Önce aktif kiralama var mı bak
+                rentalRepository.getActive()
+                    .onSuccess { activeRental ->
+                        _uiState.update {
+                            it.copy(
+                                rentalId = activeRental.id,
+                                vehicleName = "${activeRental.vehicle.brand} ${activeRental.vehicle.model}",
+                                vehiclePlate = activeRental.vehicle.plate,
+                                duration = formatSeconds(activeRental.elapsedSeconds),
+                                currentPrice = String.format(Locale.getDefault(), "₺%.2f", activeRental.currentCost),
+                                distance = String.format(Locale.getDefault(), "%.1f km", activeRental.distanceKm),
+                                isReservationActive = false,
+                                remainingReservationSeconds = null,
+                                isLoading = false
+                            )
+                        }
                     }
-
-                    val elapsedMinutes = elapsedSeconds / 60.0
-                    val totalPrice = basePrice + (minutelyRate * elapsedMinutes)
-                    currentPrice = String.format(Locale.getDefault(), "₺%.2f", totalPrice)
-
-                    // Demo amaçlı mesafeyi de süreye göre hafif hafif artıralım
-                    val distanceKm = (elapsedSeconds * 0.005)
-                    currentDistance = String.format(Locale.getDefault(), "%.1f km", distanceKm)
-                }
-
-                _uiState.update {
-                    it.copy(
-                        duration = durationString,
-                        currentPrice = currentPrice,
-                        distance = currentDistance // Mesafeyi de dinamik yaptık
-                    )
-                }
-                delay(1000) // Her saniye uiState'i günceller (Recomposition tetiklenir)
+                    .onFailure {
+                        // 2. Kiralama yoksa aktif rezervasyon var mı bak
+                        reservationRepository.getActive()
+                            .onSuccess { reservation ->
+                                _uiState.update {
+                                    it.copy(
+                                        vehicleName = "${reservation.vehicle.brand} ${reservation.vehicle.model}",
+                                        vehiclePlate = reservation.vehicle.plate,
+                                        duration = formatSeconds(reservation.remainingSeconds),
+                                        currentPrice = "₺0,00",
+                                        distance = "0,0 km",
+                                        isReservationActive = true,
+                                        remainingReservationSeconds = reservation.remainingSeconds,
+                                        isLoading = false
+                                    )
+                                }
+                            }
+                            .onFailure { error ->
+                                _uiState.update { it.copy(error = "Aktif kiralama veya rezervasyon bulunamadı.", isLoading = false) }
+                            }
+                    }
+                delay(2000) // 2 saniyede bir güncelle
             }
         }
     }
 
+    private fun formatSeconds(totalSeconds: Int): String {
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
     private fun finishRental() {
+        val currentRentalId = _uiState.value.rentalId
+        if (currentRentalId.isBlank()) return
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            rentalRepository.returnRental(rentalId)
+            rentalRepository.finish(currentRentalId)
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false) }
                     _effect.send(
                         ActiveRentalEffect.NavigateToDeliveryPhotos(
-                            rentalId = rentalId,
+                            rentalId = currentRentalId,
                             vehicleName = _uiState.value.vehicleName,
                             vehiclePlate = _uiState.value.vehiclePlate
                         )
@@ -190,14 +134,7 @@ class ActiveRentalViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
-                    // Hata verse bile sunum/demo için fotoğraflar sayfasına zorla geçirelim
-                    _effect.send(
-                        ActiveRentalEffect.NavigateToDeliveryPhotos(
-                            rentalId = rentalId,
-                            vehicleName = _uiState.value.vehicleName,
-                            vehiclePlate = _uiState.value.vehiclePlate
-                        )
-                    )
+                    _effect.send(ActiveRentalEffect.ShowMessage(error.message ?: "Kiralama sonlandırılamadı."))
                 }
         }
     }

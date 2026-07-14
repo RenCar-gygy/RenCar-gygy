@@ -185,16 +185,16 @@ fun VehicleDetailScreen(
                     InfoItem(
                         icon = Icons.Default.LocalGasStation,
                         label = "Yakıt",
-                        value = state.fuelLevel,
-                        subValue = "Dolu depo",
+                        value = "%${state.vehicle.fuelPercent}",
+                        subValue = "Menzil: ${state.vehicle.rangeKm} km",
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     InfoItem(
                         icon = Icons.Default.Speed,
-                        label = "Menzil",
-                        value = state.range,
-                        subValue = "Dolu depo",
+                        label = "Segment",
+                        value = state.vehicle.segment.name,
+                        subValue = state.vehicle.type.name,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -205,14 +205,14 @@ fun VehicleDetailScreen(
                     InfoItem(
                         icon = Icons.Default.Settings,
                         label = "Vites",
-                        value = state.transmission,
+                        value = state.vehicle.transmission.name,
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     InfoItem(
                         icon = Icons.Default.Group,
                         label = "Koltuk",
-                        value = state.seatingCapacity,
+                        value = "${state.vehicle.seats} kişi",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -227,13 +227,13 @@ fun VehicleDetailScreen(
                 ) {
                     Column {
                         Text(
-                            text = VehiclePriceFormatter.minutelyLabel(state.vehicle.pricePerDay),
+                            text = state.estimatedPrice ?: VehiclePriceFormatter.minutelyLabel(state.vehicle.pricePerDay),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = VehiclePriceFormatter.hourlyLabel(state.vehicle.pricePerDay),
+                            text = if (state.estimatedPrice != null) "Tahmini Ücret (30 dk)" else VehiclePriceFormatter.hourlyLabel(state.vehicle.pricePerDay),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -245,6 +245,7 @@ fun VehicleDetailScreen(
                 // Aksiyon Butonları
                 Button(
                     onClick = { onIntent(VehicleDetailIntent.ReserveClicked) },
+                    enabled = !state.isReserving,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -254,7 +255,15 @@ fun VehicleDetailScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("Rezerve Et", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (state.isReserving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Rezerve Et", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
         }

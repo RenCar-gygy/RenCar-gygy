@@ -225,8 +225,9 @@ fun RentalConfirmationScreen(
 
                 // Detaylar
                 PriceDetailItem("Ücretsiz rezervasyon", state.freeReservationTime)
-                PriceDetailItem("Başlangıç ücreti", state.basePrice)
-                PriceDetailItem("Tahmini ücret (${state.estimatedDuration})", state.estimatedPrice, isTotal = true)
+                PriceDetailItem("Başlangıç ücreti", state.basePriceLabel)
+                PriceDetailItem("Servis ücreti", state.serviceFeeLabel)
+                PriceDetailItem("Tahmini ücret (${state.estimatedDuration})", state.estimatedPriceLabel, isTotal = true)
 
                 Spacer(modifier = Modifier.height(32.dp))
 

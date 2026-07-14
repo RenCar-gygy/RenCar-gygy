@@ -8,13 +8,10 @@ import com.turkcell.rencarapp.data.vehicle.Vehicle
 data class VehicleDetailUiState(
     val vehicle: Vehicle? = null,
     val isLoading: Boolean = false,
+    val isReserving: Boolean = false,
     val error: String? = null,
     val distanceLabel: String = "", // Dinamik mesafe bilgisi
-    // API'da olmayan ancak tasarımda bulunan mock alanlar
-    val fuelLevel: String = "%72",
-    val range: String = "~480 km",
-    val transmission: String = "Manuel",
-    val seatingCapacity: String = "5 kişi"
+    val estimatedPrice: String? = null, // API'den gelen tahmini fiyat
 )
 
 /**
@@ -24,6 +21,7 @@ sealed interface VehicleDetailIntent {
     data object LoadVehicle : VehicleDetailIntent
     data object BackClicked : VehicleDetailIntent
     data object ReserveClicked : VehicleDetailIntent
+    data class PlanChanged(val plan: com.turkcell.rencarapp.data.network.dto.RentalPlan, val minutes: Int) : VehicleDetailIntent
     data object UnlockClicked : VehicleDetailIntent
 }
 

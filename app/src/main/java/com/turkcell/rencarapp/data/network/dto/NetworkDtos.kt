@@ -85,9 +85,26 @@ data class VehicleResponseDto(
 )
 
 @Serializable
+enum class RentalPlan {
+    PER_MINUTE,
+    HOURLY,
+    DAILY
+}
+
+@Serializable
 data class CreateRentalDto(
     val vehicleId: String,
-    val endDate: String,
+    val plan: RentalPlan = RentalPlan.DAILY,
+    val endDate: String? = null,
+)
+
+@Serializable
+data class RentalVehicleSummaryDto(
+    val id: String,
+    val plate: String,
+    val brand: String,
+    val model: String,
+    val type: String,
 )
 
 @Serializable
@@ -95,8 +112,99 @@ data class RentalResponseDto(
     val id: String,
     val userId: String,
     val vehicleId: String,
-    val startDate: String,
-    val endDate: String,
-    val totalPrice: Double,
+    val vehicle: RentalVehicleSummaryDto,
+    val plan: RentalPlan,
+    val startedAt: String,
+    val endedAt: String? = null,
+    val endDate: String? = null,
+    val totalPrice: Double? = null,
+    val startFee: Double,
+    val serviceFee: Double? = null,
+    val distanceKm: Double,
+    val durationMinutes: Int,
     val status: String,
+    val paymentStatus: String,
+    val paymentMethod: String? = null,
+    val discountAmount: Double,
+    val createdAt: String,
+)
+
+@Serializable
+data class ActiveRentalResponseDto(
+    val id: String,
+    val userId: String,
+    val vehicleId: String,
+    val vehicle: RentalVehicleSummaryDto,
+    val plan: RentalPlan,
+    val startedAt: String,
+    val endedAt: String? = null,
+    val endDate: String? = null,
+    val totalPrice: Double? = null,
+    val startFee: Double,
+    val serviceFee: Double? = null,
+    val distanceKm: Double,
+    val durationMinutes: Int,
+    val status: String,
+    val paymentStatus: String,
+    val paymentMethod: String? = null,
+    val discountAmount: Double,
+    val createdAt: String,
+    val elapsedSeconds: Int,
+    val currentCost: Double,
+)
+
+@Serializable
+data class RentalPhotoDto(
+    val side: String,
+    val imageUrl: String,
+    val createdAt: String,
+)
+
+@Serializable
+data class RentalPhotosState(
+    val rentalId: String,
+    val photos: List<RentalPhotoDto>,
+    val uploadedCount: Int,
+    val remainingSides: List<String>,
+    val photosComplete: Boolean,
+)
+
+@Serializable
+data class Quote(
+    val vehicleId: String,
+    val plan: RentalPlan,
+    val minutes: Int,
+    val usageFee: Double,
+    val startFee: Double,
+    val serviceFee: Double,
+    val estimatedTotal: Double,
+)
+
+@Serializable
+data class CreateReservationDto(
+    val vehicleId: String,
+)
+
+@Serializable
+data class ReservationVehicleSummaryDto(
+    val id: String,
+    val plate: String,
+    val brand: String,
+    val model: String,
+    val type: String,
+    val latitude: Double,
+    val longitude: Double,
+    val pricePerMinute: Double,
+)
+
+@Serializable
+data class Reservation(
+    val id: String,
+    val userId: String,
+    val vehicleId: String,
+    val vehicle: ReservationVehicleSummaryDto,
+    val status: String,
+    val expiresAt: String,
+    val remainingSeconds: Int,
+    val createdAt: String,
 )

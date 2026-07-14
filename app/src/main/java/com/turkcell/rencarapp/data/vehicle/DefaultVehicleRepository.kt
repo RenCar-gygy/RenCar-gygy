@@ -32,6 +32,20 @@ class DefaultVehicleRepository @Inject constructor(
             vehicleApi.getById(authorization = authorization, id = id).toDomain()
         }
 
+    override suspend fun getQuote(
+        id: String,
+        plan: com.turkcell.rencarapp.data.network.dto.RentalPlan,
+        minutes: Int
+    ): Result<com.turkcell.rencarapp.data.network.dto.Quote> =
+        authorizedCall { authorization ->
+            vehicleApi.getQuote(
+                authorization = authorization,
+                id = id,
+                plan = plan.name,
+                minutes = minutes
+            )
+        }
+
     private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> =
         authorizedRequestExecutor.execute(block)
 

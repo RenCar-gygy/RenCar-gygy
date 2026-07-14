@@ -53,4 +53,10 @@ interface VehicleRepository {
     ): Result<List<Vehicle>>
 
     suspend fun getById(id: String): Result<Vehicle>
+
+    suspend fun getQuote(
+        id: String,
+        plan: com.turkcell.rencarapp.data.network.dto.RentalPlan,
+        minutes: Int
+    ): Result<com.turkcell.rencarapp.data.network.dto.Quote>
 }
