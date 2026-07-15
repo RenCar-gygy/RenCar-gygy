@@ -300,6 +300,8 @@
 - **Ağ:** `NetworkModule` base URL `rencarv2`; OpenAPI JSON `/api/openapi.json`
 - **Vehicle DTO/domain:** `pricePerMinute`, `pricePerHour`, `segment`, `RESERVED` status eklendi
 - **Harita:** Kategori sekmeleri `?segment=` query ile API'den filtrelenir; `includeBusy=true` ile RENTED/RESERVED pinler gri gösterilir; pin fiyatı `pricePerHour` kullanır
+- **Harita zoom kontrolleri:** Ana haritada sağ altta `+`/`-` FAB'ları; `MapCameraActions` ile MapLibre `zoomBy(±1)` animasyonu
+- **Harita clustering:** Yakın pinler ekran piksel mesafesine göre tek "N" küme balonunda birleştirilir; yarıçap zoom arttıkça küçülür; zoom ≥ 13'te clustering kapalı; zoom ≥ 11.5'te 2'li kümeler ayrılır; küme tıklanınca kümedeki pinler zorunlu tekil moda alınır, bounds + min zoom 13 ile açılır; üst üste binen pinler dairesel spread ile ayrılır
 - **License:** `POST /license/upload` artık `selfie` multipart alanı zorunlu; ön/arka yüz ve selfie gerçek kamera ile çekilir
 - **Auth DTO:** `RegisterDto.phone` zorunlu; `referralCode` opsiyonel (kayıt formunda desteklenir)
 - **Kayıt akışı:** `POST /auth/register` token döner; kayıt sonrası OTP yerine doğrudan License ekranına yönlendirilir
