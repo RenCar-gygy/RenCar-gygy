@@ -1,20 +1,32 @@
-package com.turkcell.rencarapp.ui.rental.delivery_photos
+package com.turkcell.rencarapp.ui.rental.start_photos
 
-import androidx.activity.compose.BackHandler
-import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,33 +39,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.turkcell.rencarapp.ui.rental.delivery_photos.PhotoBox
+import com.turkcell.rencarapp.ui.rental.delivery_photos.PhotoDirection
 
 @Composable
-fun DeliveryPhotosRoute(
+fun StartPhotosRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToSummary: (String) -> Unit,
-    viewModel: DeliveryPhotosViewModel = hiltViewModel()
+    onRideStarted: () -> Unit,
+    viewModel: StartPhotosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     BackHandler {
-        viewModel.onIntent(DeliveryPhotosIntent.BackClicked)
+        viewModel.onIntent(StartPhotosIntent.BackClicked)
     }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is DeliveryPhotosEffect.NavigateBack -> onNavigateBack()
-                is DeliveryPhotosEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
-                is DeliveryPhotosEffect.ShowError -> {
+                is StartPhotosEffect.NavigateBack -> onNavigateBack()
+                is StartPhotosEffect.RideStarted -> onRideStarted()
+                is StartPhotosEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    DeliveryPhotosScreen(
+    StartPhotosScreen(
         state = uiState,
         onIntent = viewModel::onIntent
     )
@@ -61,9 +75,9 @@ fun DeliveryPhotosRoute(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeliveryPhotosScreen(
-    state: DeliveryPhotosUiState,
-    onIntent: (DeliveryPhotosIntent) -> Unit
+fun StartPhotosScreen(
+    state: StartPhotosUiState,
+    onIntent: (StartPhotosIntent) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -71,15 +85,14 @@ fun DeliveryPhotosScreen(
                 title = { },
                 navigationIcon = {
                     IconButton(
-                        onClick = { onIntent(DeliveryPhotosIntent.BackClicked) },
+                        onClick = { onIntent(StartPhotosIntent.BackClicked) },
                         modifier = Modifier
                             .padding(8.dp)
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack, 
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Geri",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -110,16 +123,16 @@ fun DeliveryPhotosScreen(
                             tint = Color(0xFFFBC02D),
                             modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.size(8.dp))
                         Text(
-                            text = "Hasarları net çek — teslim sonrası anlaşmazlığı önler.",
+                            text = "Yolculuk öncesi 4 yönü işaretle — kilidi açmak için zorunludur.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
                     Button(
-                        onClick = { onIntent(DeliveryPhotosIntent.CompletePhotosClicked) },
+                        onClick = { onIntent(StartPhotosIntent.CompletePhotosClicked) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -133,9 +146,16 @@ fun DeliveryPhotosScreen(
                         )
                     ) {
                         if (state.isSubmittingPhotos) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
                         } else {
-                            val buttonText = if (state.isComplete) "Fotoğrafları Onayla ve Devam Et" else "Eksik Fotoğrafları Tamamla"
+                            val buttonText = if (state.isComplete) {
+                                "Fotoğrafları Yükle ve Kilidi Aç"
+                            } else {
+                                "Eksik Fotoğrafları Tamamla"
+                            }
                             Text(buttonText, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -151,13 +171,13 @@ fun DeliveryPhotosScreen(
                 .padding(horizontal = 24.dp)
         ) {
             Text(
-                text = "Araç teslimi",
+                text = "Yolculuk öncesi fotoğraflar",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Teslim anında 4 yönü çek",
+                text = "Kilidi açmadan önce aracın 4 yönünü kaydet",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -176,7 +196,7 @@ fun DeliveryPhotosScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${state.capturedCount} / 4 çekildi",
+                    text = "${state.capturedCount} / 4 hazır",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium
@@ -185,24 +205,19 @@ fun DeliveryPhotosScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Photo Grid
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     PhotoBox(
                         direction = PhotoDirection.FRONT,
                         uri = state.photos[PhotoDirection.FRONT],
-                        onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.FRONT))
-                        },
+                        onClick = { onIntent(StartPhotosIntent.PhotoBoxToggled(PhotoDirection.FRONT)) },
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.size(16.dp))
                     PhotoBox(
                         direction = PhotoDirection.BACK,
                         uri = state.photos[PhotoDirection.BACK],
-                        onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.BACK))
-                        },
+                        onClick = { onIntent(StartPhotosIntent.PhotoBoxToggled(PhotoDirection.BACK)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -211,98 +226,18 @@ fun DeliveryPhotosScreen(
                     PhotoBox(
                         direction = PhotoDirection.LEFT,
                         uri = state.photos[PhotoDirection.LEFT],
-                        onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.LEFT))
-                        },
+                        onClick = { onIntent(StartPhotosIntent.PhotoBoxToggled(PhotoDirection.LEFT)) },
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.size(16.dp))
                     PhotoBox(
                         direction = PhotoDirection.RIGHT,
                         uri = state.photos[PhotoDirection.RIGHT],
-                        onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.RIGHT))
-                        },
+                        onClick = { onIntent(StartPhotosIntent.PhotoBoxToggled(PhotoDirection.RIGHT)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun PhotoBox(
-    direction: PhotoDirection,
-    uri: Uri?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isCaptured = uri != null
-
-    Box(
-        modifier = modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isCaptured) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface)
-            .then(
-                if (!isCaptured) {
-                    Modifier.border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                } else Modifier
-            )
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = if (isCaptured) Icons.Default.DirectionsCar else Icons.Default.PhotoCamera,
-                contentDescription = null,
-                tint = if (isCaptured) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            if (!isCaptured) {
-                Text(
-                    text = "Fotoğraf çek",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Direction Tag
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp),
-            color = if (isCaptured) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(
-                text = direction.label,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isCaptured) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        // Checkmark
-        if (isCaptured) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = Color(0xFF4CAF50),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(24.dp)
-                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-            )
         }
     }
 }

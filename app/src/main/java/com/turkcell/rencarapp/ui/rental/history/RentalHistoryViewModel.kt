@@ -6,9 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.rental.RentalRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -59,46 +55,41 @@ class RentalHistoryViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = rentalRepository.listMine()
+            rentalRepository.listMine()
+                .onSuccess { rentals ->
+                    val uiModels = rentals.map { rental ->
+                        val vehicleName = listOf(rental.vehicleBrand, rental.vehicleModel)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" ")
+                            .ifBlank { "Araç ${rental.vehicleId.take(4).uppercase()}" }
 
-            result.onSuccess { rentals ->
-                // Araç detaylarını paralel (aynı anda) çekmek için coroutineScope ve async kullanıyoruz
-                val uiModels = coroutineScope {
-                    rentals.map { rental ->
-                        async {
-                            val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
+                        RentalUiModel(
+                            id = rental.id,
+                            vehicleName = vehicleName,
+                            dateText = dateFormatter.format(rental.startDate),
+                            durationText = "${rental.durationMinutes} dk",
+                            distanceText = String.format(
+                                Locale.forLanguageTag("tr-TR"),
+                                "%.1f km",
+                                rental.distanceKm
+                            ),
+                            priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
+                        )
+                    }
 
-                            // Araç API'sini çağırıp marka/model bilgisini alıyoruz
-                            val vehicleResult = rentalRepository.getVehicleById(rental.vehicleId)
-
-                            // Başarılı olursa Toyota Corolla yazar, hata olursa fallback olarak ID'nin ilk 4 harfini yazar
-                            val vehicleName = vehicleResult.getOrNull()?.let { "${it.brand} ${it.model}" }
-                                ?: "Araç ${rental.vehicleId.take(4).uppercase()}"
-
-                            RentalUiModel(
-                                id = rental.id,
-                                vehicleName = vehicleName,
-                                dateText = dateFormatter.format(rental.startDate),
-                                durationText = "$durationMinutes dk",
-                                distanceText = "12,4 km",
-                                priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
-                            )
-                        }
-                    }.awaitAll() // Bütün araç detay isteklerinin bitmesini bekliyor
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            rentals = uiModels,
+                            monthlyTripCount = uiModels.size,
+                            monthlyTotalSpent = rentals.sumOf { rental -> rental.totalPrice }
+                        )
+                    }
                 }
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        rentals = uiModels,
-                        monthlyTripCount = uiModels.size,
-                        monthlyTotalSpent = rentals.sumOf { r -> r.totalPrice }
-                    )
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    _effect.send(RentalHistoryEffect.ShowError(error.message ?: "Kiralama geçmişi alınamadı."))
                 }
-            }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false) }
-                _effect.send(RentalHistoryEffect.ShowError(error.message ?: "Kiralama geçmişi alınamadı."))
-            }
         }
     }
 }

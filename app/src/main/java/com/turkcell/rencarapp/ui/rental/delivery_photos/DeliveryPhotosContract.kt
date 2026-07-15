@@ -2,13 +2,16 @@ package com.turkcell.rencarapp.ui.rental.delivery_photos
 
 import android.net.Uri
 
+/** Yerel işaretleme modu; gerçek kamera/upload entegrasyonu sonraya bırakıldı. */
+val MARKED_PHOTO_URI: Uri = Uri.parse("rencar://local/marked")
+
 data class DeliveryPhotosUiState(
     val brand: String = "",
     val model: String = "",
     val plate: String = "",
     val photos: Map<PhotoDirection, Uri?> = PhotoDirection.entries.associateWith { null },
     val isLoading: Boolean = false,
-    val isStartingRental: Boolean = false
+    val isSubmittingPhotos: Boolean = false
 ) {
     val capturedCount: Int = photos.values.count { it != null }
     val isComplete: Boolean = capturedCount == PhotoDirection.entries.size
@@ -34,8 +37,8 @@ enum class PhotoDirection(val label: String) {
 }
 
 sealed interface DeliveryPhotosIntent {
-    data class PhotoCaptured(val direction: PhotoDirection, val uri: Uri) : DeliveryPhotosIntent
-    data object StartRentalClicked : DeliveryPhotosIntent
+    data class PhotoBoxToggled(val direction: PhotoDirection) : DeliveryPhotosIntent
+    data object CompletePhotosClicked : DeliveryPhotosIntent
     data object BackClicked : DeliveryPhotosIntent
 }
 

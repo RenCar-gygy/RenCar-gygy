@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.util.Locale
 import javax.inject.Inject
 
@@ -42,38 +41,39 @@ class RentalSummaryViewModel @Inject constructor(
         if (rentalId == null) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) } // Yükleniyor animasyonunu başlat
+            _uiState.update { it.copy(isLoading = true) }
 
-            val result = rentalRepository.getById(rentalId)
+            rentalRepository.getById(rentalId)
+                .onSuccess { rental ->
+                    val usageFee = (rental.totalPrice - rental.serviceFee).coerceAtLeast(0.0)
+                    val vehicleName = listOf(rental.vehicleBrand, rental.vehicleModel)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                        .ifBlank { "Araç" }
 
-            result.onSuccess { rental ->
-                val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
-                val total = rental.totalPrice
-                val serviceFee = total * 0.10
-                val rentalFee = total - serviceFee
-
-                // YENİ: Fake veriler yerine gerçek araç bilgilerini API'den çekiyoruz
-                val vehicleResult = rentalRepository.getVehicleById(rental.vehicleId)
-                val vehicle = vehicleResult.getOrNull()
-
-                _uiState.update { state ->
-                    state.copy(
-                        isLoading = false,
-                        vehicleName = vehicle?.let { "${it.brand} ${it.model}" } ?: "Araç Bulunamadı",
-                        plate = vehicle?.plate ?: "Plaka Yok",
-                        durationText = "$durationMinutes dakika",
-                        distanceText = "12.4 km",
-                        rentalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rentalFee),
-                        serviceFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", serviceFee),
-                        totalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", total),
-                        cardBrand = "Mastercard",
-                        cardLast4 = "3241"
-                    )
+                    _uiState.update { state ->
+                        state.copy(
+                            isLoading = false,
+                            vehicleName = vehicleName,
+                            plate = rental.vehiclePlate.ifBlank { "—" },
+                            durationText = "${rental.durationMinutes} dakika",
+                            distanceText = String.format(
+                                Locale.forLanguageTag("tr-TR"),
+                                "%.1f km",
+                                rental.distanceKm
+                            ),
+                            rentalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", usageFee),
+                            serviceFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.serviceFee),
+                            totalFee = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice),
+                            cardBrand = "Mastercard",
+                            cardLast4 = "3241"
+                        )
+                    }
                 }
-            }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false) }
-                _effect.send(RentalSummaryEffect.ShowError(error.message ?: "Fatura bilgileri alınamadı."))
-            }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    _effect.send(RentalSummaryEffect.ShowError(error.message ?: "Fatura bilgileri alınamadı."))
+                }
         }
     }
 

@@ -302,6 +302,35 @@
 - **Harita:** Kategori sekmeleri `?segment=` query ile API'den filtrelenir; `includeBusy=true` ile RENTED/RESERVED pinler gri gösterilir; pin fiyatı `pricePerHour` kullanır
 - **Harita zoom kontrolleri:** Ana haritada sağ altta `+`/`-` FAB'ları; `MapCameraActions` ile MapLibre `zoomBy(±1)` animasyonu
 - **Harita clustering:** Yakın pinler ekran piksel mesafesine göre tek "N" küme balonunda birleştirilir; yarıçap zoom arttıkça küçülür; zoom ≥ 13'te clustering kapalı; zoom ≥ 11.5'te 2'li kümeler ayrılır; küme tıklanınca kümedeki pinler zorunlu tekil moda alınır, bounds + min zoom 13 ile açılır; üst üste binen pinler dairesel spread ile ayrılır
+- **Canlı araç konumu (Socket.IO):** `RideLocationClient` (`data/rental/`) aktif kiralama ekranında `my-vehicle` event'ini dinler; JWT handshake + `AuthorizedRequestExecutor.refreshCurrentSession()` ile connect_error sonrası tek seferlik oturum tazeleme; konum `VehiclePoint` olarak `ActiveRentalViewModel` state'ine akar
 - **License:** `POST /license/upload` artık `selfie` multipart alanı zorunlu; ön/arka yüz ve selfie gerçek kamera ile çekilir
 - **Auth DTO:** `RegisterDto.phone` zorunlu; `referralCode` opsiyonel (kayıt formunda desteklenir)
 - **Kayıt akışı:** `POST /auth/register` token döner; kayıt sonrası OTP yerine doğrudan License ekranına yönlendirilir
+
+---
+
+### API v2 — Kiralama akışı zamanlaması (rental-flow-pages)
+
+- Karar: Kiralama akışı OpenAPI v2 ile hizalandı; plan bazlı fotoğraf ve `start`/`finish` zamanlaması API sözleşmesine uygun.
+- Son Güncelleme Tarihi: 15.07.2026
+- **Dakikalık / Saatlik:** `POST /rentals` → `PREPARING` → kilidi aç → **başlangıç foto ekranı** (`POST /rentals/{id}/photos` ×4) → `POST /rentals/{id}/start` → `ACTIVE` (sayaç/ücret burada başlar)
+- **Günlük:** `POST /rentals` + `endDate` → doğrudan `ACTIVE`; başlangıç fotoğrafı ve `start` çağrısı yok; kilidi aç yalnızca yerel kilit durumunu günceller
+- **Bitir:** `POST /rentals/{id}/finish` → doğrudan özet ekranı; API bitiş fotoğrafı zorunlu tutmaz
+- **Onay ekranı:** `create` sonrası `start` çağrılmaz; dk/sa için aktif ekran `PREPARING` modunda açılır
+- **Başlangıç fotoğrafları:** `ui/rental/start_photos/` — kutucuk işaretleme + API upload (gerçek kamera Nazlı'ya bırakıldı)
+- **Teslim fotoğrafları:** `ui/rental/delivery_photos/` grafikte kalır; ana akıştan çıkarıldı (ürün stub, API karşılığı yok)
+- **Rezervasyon iptali:** Onay ekranından geri dönülünce `DELETE /reservations/{id}`
+- **Hata mesajları:** `ApiException` + `ApiErrorContext` ile 409/403/404 bağlama özel mesajlar
+
+---
+
+### API v2 — Kiralama domain ve plan mapping (rental-flow-pages Faz 2)
+
+- Karar: `RentalPlan` eşlemesi repository katmanına taşındı; UI `data.rental.RentalPlan` kullanır.
+- Son Güncelleme Tarihi: 15.07.2026
+- `RentalPlanMapping.kt`: `toNetwork()`, `defaultQuoteMinutes()`, `durationLabel()`, `requiresScheduledEndDate()`
+- `VehicleRepository.getQuote` artık domain `RentalPlan` alır; network DTO sızıntısı ViewModel'den kaldırıldı
+- `Rental` domain modeli genişletildi: `plan`, `serviceFee`, `distanceKm`, `durationMinutes`, `paymentStatus`, araç özet alanları (`vehicleBrand` vb.)
+- `RentalSummaryViewModel` / `RentalHistoryViewModel` sabit mesafe ve tahmini servis ücreti yerine domain alanlarını kullanır
+- Kullanılmayan `RentalRepository.returnRental()` kaldırıldı; akış `finish` üzerinden devam eder
+- Aktif kiralama haritası: `followLocationWithPan` ile ilk zoom sonrası yumuşak pan; konum beklenirken placeholder; rezervasyon modunda `mm:ss` geri sayım

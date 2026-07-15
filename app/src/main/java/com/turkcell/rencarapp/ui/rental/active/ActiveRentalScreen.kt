@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,10 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.turkcell.rencarapp.data.vehicle.VehicleType
+import com.turkcell.rencarapp.ui.map.MapLibreMapView
+import com.turkcell.rencarapp.ui.map.MapVehiclePin
+import com.turkcell.rencarapp.ui.map.VehicleCategory
+import org.maplibre.android.geometry.LatLng
 
 @Composable
 fun ActiveRentalRoute(
-    onNavigateToDeliveryPhotos: (String, String, String) -> Unit,
+    onNavigateToStartPhotos: (String, String, String) -> Unit,
+    onNavigateToSummary: (String) -> Unit,
+    onNavigateBackAfterCancel: () -> Unit,
     viewModel: ActiveRentalViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -35,12 +43,16 @@ fun ActiveRentalRoute(
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ActiveRentalEffect.NavigateToDeliveryPhotos -> {
-                    onNavigateToDeliveryPhotos(effect.rentalId, effect.vehicleName, effect.vehiclePlate)
+                is ActiveRentalEffect.NavigateToStartPhotos -> {
+                    onNavigateToStartPhotos(effect.rentalId, effect.vehicleName, effect.vehiclePlate)
+                }
+                is ActiveRentalEffect.NavigateToSummary -> {
+                    onNavigateToSummary(effect.rentalId)
                 }
                 is ActiveRentalEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
+                is ActiveRentalEffect.NavigateBackAfterCancel -> onNavigateBackAfterCancel()
             }
         }
     }
@@ -65,11 +77,72 @@ fun ActiveRentalScreen(
     state: ActiveRentalUiState,
     onIntent: (ActiveRentalIntent) -> Unit
 ) {
+    val vehiclePins = remember(
+        state.rentalId,
+        state.vehicleName,
+        state.vehiclePlate,
+        state.vehicleLatitude,
+        state.vehicleLongitude,
+    ) {
+        val latitude = state.vehicleLatitude
+        val longitude = state.vehicleLongitude
+        if (latitude != null && longitude != null) {
+            listOf(
+                MapVehiclePin(
+                    id = state.rentalId,
+                    priceLabel = state.vehiclePlate,
+                    brand = state.vehicleName,
+                    model = "",
+                    plate = state.vehiclePlate,
+                    category = VehicleCategory.ALL,
+                    vehicleType = VehicleType.SEDAN,
+                    latitude = latitude,
+                    longitude = longitude,
+                    isInUse = true,
+                ),
+            )
+        } else {
+            emptyList()
+        }
+    }
+
+    val vehicleLocation = remember(state.vehicleLatitude, state.vehicleLongitude) {
+        state.vehicleLatitude?.let { latitude ->
+            state.vehicleLongitude?.let { longitude -> LatLng(latitude, longitude) }
+        }
+    }
+    val canFollowVehicle = !state.isReservationActive && vehicleLocation != null
+
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // --- 1. CANLI HARİTA (MAPLIBRE) ---
-        // Harita arka planı için tema rengi
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+        if (vehiclePins.isNotEmpty() || state.isVehicleLocationPending) {
+            MapLibreMapView(
+                pins = vehiclePins,
+                onPinClick = {},
+                myLocation = vehicleLocation,
+                followLocationWithPan = canFollowVehicle,
+                pinFocusZoom = 15.0,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+        }
+
+        if (state.isVehicleLocationPending) {
+            Surface(
+                modifier = Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp
+            ) {
+                Text(
+                    text = "Araç konumu alınıyor…",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
 
         // --- 2. ÜST BİLGİ BARI ---
         Surface(
@@ -88,11 +161,21 @@ fun ActiveRentalScreen(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(if (state.isReservationActive) Color(0xFFFFA000) else Color(0xFF4CAF50))
+                        .background(
+                            when {
+                                state.isReservationActive -> Color(0xFFFFA000)
+                                state.isPreparingRental -> Color(0xFF2196F3)
+                                else -> Color(0xFF4CAF50)
+                            }
+                        )
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (state.isReservationActive) "Rezervasyon Aktif" else "Kiralama Aktif - ${state.vehicleName}",
+                    text = when {
+                        state.isReservationActive -> "Rezervasyon Aktif"
+                        state.isPreparingRental -> "Kiralama Hazırlanıyor - ${state.vehicleName}"
+                        else -> "Kiralama Aktif - ${state.vehicleName}"
+                    },
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Medium
@@ -127,7 +210,11 @@ fun ActiveRentalScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = if (state.isReservationActive) "Kalan Rezervasyon Süresi" else "Geçen Kullanım Süresi",
+                    text = when {
+                        state.isReservationActive -> "Kalan Rezervasyon Süresi"
+                        state.isPreparingRental -> "Başlamak için kilidi açın"
+                        else -> "Geçen Kullanım Süresi"
+                    },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -141,7 +228,33 @@ fun ActiveRentalScreen(
                     color = if (state.isReservationActive) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                 )
 
+                if (state.isReservationActive) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Süre dolmadan kiralamayı başlatın",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
+
+                if (state.canCancelRental) {
+                    OutlinedButton(
+                        onClick = { onIntent(ActiveRentalIntent.CancelRentalClicked) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Kiralamadan Vazgeç", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     // Fiyat Kartı
@@ -220,7 +333,11 @@ fun ActiveRentalScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (state.isLocked) "Kilidi Aç" else "Kilitle",
+                            text = when {
+                                state.isPreparingRental && state.isLocked -> "Kilidi Aç ve Başlat"
+                                state.isLocked -> "Kilidi Aç"
+                                else -> "Kilitle"
+                            },
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -238,7 +355,7 @@ fun ActiveRentalScreen(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
                         ),
-                        enabled = !state.isLocked && !state.isReservationActive
+                        enabled = !state.isLocked && !state.isReservationActive && !state.isPreparingRental
                     ) {
                         Text("Kiralamayı Bitir", fontWeight = FontWeight.Bold)
                     }

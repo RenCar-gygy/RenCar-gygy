@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.vehicle.detail
 
+import com.turkcell.rencarapp.data.rental.RentalPlan
 import com.turkcell.rencarapp.data.vehicle.Vehicle
 
 /**
@@ -21,7 +22,7 @@ sealed interface VehicleDetailIntent {
     data object LoadVehicle : VehicleDetailIntent
     data object BackClicked : VehicleDetailIntent
     data object ReserveClicked : VehicleDetailIntent
-    data class PlanChanged(val plan: com.turkcell.rencarapp.data.network.dto.RentalPlan, val minutes: Int) : VehicleDetailIntent
+    data class PlanChanged(val plan: RentalPlan, val minutes: Int) : VehicleDetailIntent
     data object UnlockClicked : VehicleDetailIntent
 }
 
@@ -31,5 +32,6 @@ sealed interface VehicleDetailIntent {
 sealed interface VehicleDetailEffect {
     data object NavigateBack : VehicleDetailEffect
     data class NavigateToConfirmation(val vehicleId: String) : VehicleDetailEffect
+    data class NavigateToActiveRental(val rentalId: String) : VehicleDetailEffect
     data class ShowMessage(val message: String) : VehicleDetailEffect
 }
