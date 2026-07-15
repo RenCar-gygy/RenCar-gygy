@@ -3,12 +3,16 @@ package com.turkcell.rencarapp.ui.rental.active
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,7 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,6 +35,12 @@ import com.turkcell.rencarapp.ui.map.MapLibreMapView
 import com.turkcell.rencarapp.ui.map.MapVehiclePin
 import com.turkcell.rencarapp.ui.map.VehicleCategory
 import org.maplibre.android.geometry.LatLng
+
+private val RenCarBlue = Color(0xFF2563EB)
+private val RenCarBlueGlow = Color(0x662563EB)
+private val SuccessGreen = Color(0xFF22C55E)
+private val WarningOrange = Color(0xFFF59E0B)
+private val ErrorRed = Color(0xFFEF4444)
 
 @Composable
 fun ActiveRentalRoute(
@@ -67,7 +79,7 @@ fun ActiveRentalRoute(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = RenCarBlue)
         }
     }
 }
@@ -77,6 +89,10 @@ fun ActiveRentalScreen(
     state: ActiveRentalUiState,
     onIntent: (ActiveRentalIntent) -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val surfaceColor = if (isDark) Color(0xFF111827) else Color.White
+    val backgroundColor = if (isDark) Color(0xFF0B0F14) else Color(0xFFF8FAFC)
+
     val vehiclePins = remember(
         state.rentalId,
         state.vehicleName,
@@ -113,7 +129,7 @@ fun ActiveRentalScreen(
     }
     val canFollowVehicle = !state.isReservationActive && vehicleLocation != null
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
 
         if (vehiclePins.isNotEmpty() || state.isVehicleLocationPending) {
             MapLibreMapView(
@@ -124,38 +140,49 @@ fun ActiveRentalScreen(
                 pinFocusZoom = 15.0,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else {
-            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
         }
 
         if (state.isVehicleLocationPending) {
             Surface(
-                modifier = Modifier.align(Alignment.Center),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 2.dp
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(bottom = 100.dp),
+                color = surfaceColor.copy(alpha = 0.95f),
+                shape = RoundedCornerShape(16.dp),
+                tonalElevation = 4.dp,
+                shadowElevation = 8.dp
             ) {
-                Text(
-                    text = "Araç konumu alınıyor…",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = RenCarBlue)
+                    Text(
+                        text = "Araç konumu güncelleniyor…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isDark) Color.White else Color(0xFF0F172A),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
 
         // --- 2. ÜST BİLGİ BARI ---
         Surface(
             modifier = Modifier
-                .padding(top = 48.dp)
-                .align(Alignment.TopCenter),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(24.dp),
+                .statusBarsPadding()
+                .padding(top = 16.dp)
+                .align(Alignment.TopCenter)
+                .shadow(8.dp, CircleShape),
+            color = surfaceColor,
+            shape = CircleShape,
             tonalElevation = 4.dp
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -163,22 +190,28 @@ fun ActiveRentalScreen(
                         .clip(CircleShape)
                         .background(
                             when {
-                                state.isReservationActive -> Color(0xFFFFA000)
-                                state.isPreparingRental -> Color(0xFF2196F3)
-                                else -> Color(0xFF4CAF50)
+                                state.isReservationActive -> WarningOrange
+                                state.isPreparingRental -> RenCarBlue
+                                else -> SuccessGreen
                             }
                         )
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = when {
                         state.isReservationActive -> "Rezervasyon Aktif"
-                        state.isPreparingRental -> "Kiralama Hazırlanıyor - ${state.vehicleName}"
-                        else -> "Kiralama Aktif - ${state.vehicleName}"
+                        state.isPreparingRental -> "Sürüş Hazırlığı"
+                        else -> "Kiralama Aktif"
                     },
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (isDark) Color.White else Color(0xFF0F172A),
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Bold
+                )
+                VerticalDivider(modifier = Modifier.height(16.dp), color = if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0))
+                Text(
+                    text = state.vehiclePlate,
+                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -189,178 +222,180 @@ fun ActiveRentalScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
         ) {
             Column(
                 modifier = Modifier
                     .padding(24.dp)
-                    .padding(bottom = 24.dp),
+                    .navigationBarsPadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Sürükleme Çubuğu (Handle)
+                // Sürükleme Çubuğu
                 Box(
                     modifier = Modifier
                         .width(40.dp)
                         .height(4.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
+                        .background(if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0))
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text(
-                    text = when {
-                        state.isReservationActive -> "Kalan Rezervasyon Süresi"
-                        state.isPreparingRental -> "Başlamak için kilidi açın"
-                        else -> "Geçen Kullanım Süresi"
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                // SAYACIN GÖRÜNDÜĞÜ YER
-                Text(
-                    text = state.duration,
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    color = if (state.isReservationActive) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
-                )
-
-                if (state.isReservationActive) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Süre dolmadan kiralamayı başlatın",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = when {
+                            state.isReservationActive -> "Kalan Rezervasyon Süresi"
+                            state.isPreparingRental -> "Aracın kilidini açın"
+                            else -> "Sürüş Süresi"
+                        },
+                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    
+                    Text(
+                        text = state.duration,
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Black,
+                        color = when {
+                            state.isReservationActive -> WarningOrange
+                            state.isPreparingRental -> RenCarBlue
+                            else -> RenCarBlue
+                        }
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                if (state.canCancelRental) {
-                    OutlinedButton(
-                        onClick = { onIntent(ActiveRentalIntent.CancelRentalClicked) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Kiralamadan Vazgeç", fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Fiyat Kartı
-                    Surface(
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Ücret Kartı
+                    StatItem(
+                        icon = Icons.Outlined.Timer,
+                        label = "Anlık Ücret",
+                        value = state.currentPrice,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Anlık ücret", 
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, 
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                            Text(
-                                text = state.currentPrice,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
+                        isDark = isDark,
+                        valueColor = RenCarBlue
+                    )
 
                     // Mesafe Kartı
-                    Surface(
+                    StatItem(
+                        icon = Icons.Outlined.Straighten,
+                        label = "Mesafe",
+                        value = state.distance,
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Mesafe", 
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, 
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                            Text(
-                                text = state.distance,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        }
-                    }
+                        isDark = isDark
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Kilit Butonu (Yalnızca kiralama aktifse veya rezervasyondan kiralama başlatılacaksa anlamlı)
-                    // Ancak v2'de rezervasyon -> kiralama (PREPARING) -> start (ACTIVE) akışı var.
-                    // Bu ekran "Kiralama başladıktan sonraki" ekran ise, isReservationActive false olmalı.
-                    
-                    OutlinedButton(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Kilit Kontrolü
+                    Button(
                         onClick = { onIntent(ActiveRentalIntent.ToggleLock) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
+                            .height(56.dp)
+                            .shadow(if (!state.isLocked) 8.dp else 0.dp, RoundedCornerShape(16.dp), spotColor = RenCarBlueGlow),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (state.isLocked) RenCarBlue else if (isDark) Color(0xFF1F2937) else Color(0xFFF1F5F9),
+                            contentColor = if (state.isLocked) Color.White else (if (isDark) Color.White else Color(0xFF0F172A))
                         ),
-                        border = BorderStroke(1.dp, if (state.isLocked) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline),
                         enabled = !state.isReservationActive
                     ) {
                         Icon(
-                            if (state.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                            contentDescription = null
+                            if (state.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = when {
-                                state.isPreparingRental && state.isLocked -> "Kilidi Aç ve Başlat"
-                                state.isLocked -> "Kilidi Aç"
-                                else -> "Kilitle"
-                            },
+                            text = if (state.isLocked) "Kilidi Aç" else "Kilitle",
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    // Kiralamayı Bitir Butonu
+                    // Bitir Butonu
                     Button(
                         onClick = { onIntent(ActiveRentalIntent.FinishRental) },
                         modifier = Modifier
-                            .weight(1.2f)
+                            .weight(1f)
                             .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
+                            containerColor = if (!state.isLocked && !state.isPreparingRental) ErrorRed else (if (isDark) Color(0xFF1F2937) else Color(0xFFF1F5F9)).copy(alpha = 0.5f),
+                            contentColor = if (!state.isLocked && !state.isPreparingRental) Color.White else (if (isDark) Color(0xFF475569) else Color(0xFF94A3B8))
                         ),
                         enabled = !state.isLocked && !state.isReservationActive && !state.isPreparingRental
                     ) {
-                        Text("Kiralamayı Bitir", fontWeight = FontWeight.Bold)
+                        Text("Sürüşü Bitir", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                if (state.canCancelRental) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
+                        onClick = { onIntent(ActiveRentalIntent.CancelRentalClicked) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Rezervasyonu İptal Et", 
+                            color = ErrorRed, 
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun StatItem(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    isDark: Boolean,
+    valueColor: Color? = null
+) {
+    Surface(
+        modifier = modifier,
+        color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                )
+                Text(
+                    text = label, 
+                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B), 
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                fontWeight = FontWeight.Bold,
+                color = valueColor ?: (if (isDark) Color.White else Color(0xFF0F172A)),
+                style = MaterialTheme.typography.titleLarge
+            )
         }
     }
 }
