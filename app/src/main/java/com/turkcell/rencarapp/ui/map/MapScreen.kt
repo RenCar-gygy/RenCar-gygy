@@ -26,8 +26,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Place
@@ -163,6 +165,7 @@ fun MapScreen(
 ) {
     val colors = mapColors()
     val userLocationState = rememberMapUserLocation()
+    val mapCameraActions = remember { MapCameraActions() }
 
     if (userLocationState.isPermissionDenied) {
         MapPermissionDeniedScreen(
@@ -207,6 +210,7 @@ fun MapScreen(
         MapLibreMapView(
             pins = state.visiblePins,
             onPinClick = { onIntent(MapIntent.VehiclePinClicked(it)) },
+            cameraActions = mapCameraActions,
             myLocation = myLocation,
             focusMyLocation = state.shouldFocusMyLocation,
             onMyLocationFocused = { onIntent(MapIntent.MyLocationFocusHandled) },
@@ -248,66 +252,84 @@ fun MapScreen(
                 .padding(top = 12.dp, bottom = 12.dp),
         )
 
-        Box(
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 250.dp)
-                .size(48.dp)
-                .shadow(8.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-                .background(colors.fabBackground)
-                .clickable {
-                    if (!userLocationState.hasPermission) {
-                        userLocationState.requestPermission()
-                    } else {
-                        val cachedLocation = myLocation ?: userLocationState.location
-                        if (cachedLocation != null) {
-                            onIntent(MapIntent.MyLocationClicked)
-                            onIntent(
-                                MapIntent.UserLocationUpdated(
-                                    latitude = cachedLocation.latitude,
-                                    longitude = cachedLocation.longitude,
-                                    isPreciseLocation = userLocationState.isPreciseLocation,
-                                ),
-                            )
-                            userLocationState.refreshAndGetLocation { refreshed ->
-                                if (
-                                    refreshed != null &&
-                                    !sameCoordinates(refreshed, cachedLocation)
-                                ) {
-                                    onIntent(
-                                        MapIntent.UserLocationUpdated(
-                                            latitude = refreshed.latitude,
-                                            longitude = refreshed.longitude,
-                                            isPreciseLocation = userLocationState.isPreciseLocation,
-                                        ),
-                                    )
-                                }
-                            }
+                .padding(end = 16.dp, bottom = 250.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            MapZoomButton(
+                icon = Icons.Default.Add,
+                contentDescription = "Yakınlaştır",
+                colors = colors,
+                onClick = mapCameraActions::zoomIn,
+            )
+            MapZoomButton(
+                icon = Icons.Default.Remove,
+                contentDescription = "Uzaklaştır",
+                colors = colors,
+                onClick = mapCameraActions::zoomOut,
+            )
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(8.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(colors.fabBackground)
+                    .clickable {
+                        if (!userLocationState.hasPermission) {
+                            userLocationState.requestPermission()
                         } else {
-                            userLocationState.refreshAndGetLocation { location ->
+                            val cachedLocation = myLocation ?: userLocationState.location
+                            if (cachedLocation != null) {
                                 onIntent(MapIntent.MyLocationClicked)
-                                if (location != null) {
-                                    onIntent(
-                                        MapIntent.UserLocationUpdated(
-                                            latitude = location.latitude,
-                                            longitude = location.longitude,
-                                            isPreciseLocation = userLocationState.isPreciseLocation,
-                                        ),
-                                    )
+                                onIntent(
+                                    MapIntent.UserLocationUpdated(
+                                        latitude = cachedLocation.latitude,
+                                        longitude = cachedLocation.longitude,
+                                        isPreciseLocation = userLocationState.isPreciseLocation,
+                                    ),
+                                )
+                                userLocationState.refreshAndGetLocation { refreshed ->
+                                    if (
+                                        refreshed != null &&
+                                        !sameCoordinates(refreshed, cachedLocation)
+                                    ) {
+                                        onIntent(
+                                            MapIntent.UserLocationUpdated(
+                                                latitude = refreshed.latitude,
+                                                longitude = refreshed.longitude,
+                                                isPreciseLocation = userLocationState.isPreciseLocation,
+                                            ),
+                                        )
+                                    }
+                                }
+                            } else {
+                                userLocationState.refreshAndGetLocation { location ->
+                                    onIntent(MapIntent.MyLocationClicked)
+                                    if (location != null) {
+                                        onIntent(
+                                            MapIntent.UserLocationUpdated(
+                                                latitude = location.latitude,
+                                                longitude = location.longitude,
+                                                isPreciseLocation = userLocationState.isPreciseLocation,
+                                            ),
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Default.MyLocation,
-                contentDescription = "Konumum",
-                tint = colors.fabIcon,
-                modifier = Modifier.size(22.dp),
-            )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "Konumum",
+                    tint = colors.fabIcon,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
 
         MapBottomSheet(
@@ -322,6 +344,32 @@ fun MapScreen(
 private fun sameCoordinates(first: LatLng, second: LatLng): Boolean =
     kotlin.math.abs(first.latitude - second.latitude) < 0.0001 &&
         kotlin.math.abs(first.longitude - second.longitude) < 0.0001
+
+@Composable
+private fun MapZoomButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    colors: MapColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .shadow(8.dp, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.fabBackground)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = colors.fabIcon,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
 
 @Composable
 private fun MapPermissionDeniedScreen(

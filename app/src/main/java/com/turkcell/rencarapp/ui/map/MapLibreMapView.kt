@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -31,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -55,7 +57,11 @@ import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private const val TAG = "MapLibreMapView"
 private const val DEFAULT_ZOOM = 12.0
@@ -74,10 +80,45 @@ private data class PinScreenPosition(
     val yPx: Float,
 )
 
+private sealed interface MapPinDisplayItem {
+    data class Single(
+        val pin: MapVehiclePin,
+        val xPx: Float,
+        val yPx: Float,
+    ) : MapPinDisplayItem
+
+    data class Cluster(
+        val pins: List<MapVehiclePin>,
+        val xPx: Float,
+        val yPx: Float,
+        val count: Int,
+    ) : MapPinDisplayItem {
+        val centerLat: Double get() = pins.map { it.latitude }.average()
+        val centerLng: Double get() = pins.map { it.longitude }.average()
+    }
+}
+
+class MapCameraActions {
+    internal var map: MapLibreMap? = null
+
+    fun zoomIn() {
+        map?.animateCamera(CameraUpdateFactory.zoomBy(ZOOM_STEP))
+    }
+
+    fun zoomOut() {
+        val map = map ?: return
+        val currentZoom = map.cameraPosition.zoom
+        if (currentZoom > map.minZoomLevel) {
+            map.animateCamera(CameraUpdateFactory.zoomBy(-ZOOM_STEP))
+        }
+    }
+}
+
 @Composable
 fun MapLibreMapView(
     pins: List<MapVehiclePin>,
     onPinClick: (String) -> Unit,
+    cameraActions: MapCameraActions = remember { MapCameraActions() },
     myLocation: LatLng? = null,
     focusMyLocation: Boolean = false,
     onMyLocationFocused: () -> Unit = {},
@@ -103,9 +144,13 @@ fun MapLibreMapView(
     val latestFocusSearchArea by rememberUpdatedState(focusSearchArea)
     val latestOnSearchAreaFocused by rememberUpdatedState(onSearchAreaFocused)
     val latestPinFocusZoom by rememberUpdatedState(pinFocusZoom)
+    val latestCameraActions by rememberUpdatedState(cameraActions)
+    val density = LocalDensity.current
+    val clusterRadiusPx = remember(density) { with(density) { CLUSTER_RADIUS_DP.dp.toPx() } }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
-    var pinPositions by remember { mutableStateOf<List<PinScreenPosition>>(emptyList()) }
+    var displayItems by remember { mutableStateOf<List<MapPinDisplayItem>>(emptyList()) }
+    var forceExpandedPinIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var hasPerformedInitialZoom by remember { mutableStateOf(false) }
 
     remember {
@@ -133,15 +178,31 @@ fun MapLibreMapView(
         }
     }
 
-    fun refreshPinPositions(map: MapLibreMap, currentPins: List<MapVehiclePin>) {
-        pinPositions = currentPins.mapNotNull { pin ->
+    fun refreshDisplayItems(map: MapLibreMap, currentPins: List<MapVehiclePin>) {
+        val zoom = map.cameraPosition.zoom
+        if (zoom < CLUSTER_RECLUSTER_ZOOM) {
+            forceExpandedPinIds = emptySet()
+        }
+
+        val screenPositions = currentPins.map { pin ->
             val screen = map.projection.toScreenLocation(LatLng(pin.latitude, pin.longitude))
             PinScreenPosition(pin = pin, xPx = screen.x, yPx = screen.y)
         }
+        displayItems = applySpiderSpread(
+            items = clusterPins(
+                positions = screenPositions,
+                baseRadiusPx = clusterRadiusPx,
+                zoom = zoom,
+                forceExpandedPinIds = forceExpandedPinIds,
+            ),
+            separationPx = clusterRadiusPx * PIN_SPREAD_SEPARATION_FACTOR,
+            zoom = zoom,
+        )
     }
 
     fun bindMap(map: MapLibreMap) {
         mapRef = map
+        latestCameraActions.map = map
         map.uiSettings.setAllGesturesEnabled(gesturesEnabled)
         map.uiSettings.isAttributionEnabled = gesturesEnabled
         map.uiSettings.isLogoEnabled = gesturesEnabled
@@ -154,9 +215,12 @@ fun MapLibreMapView(
                 .target(DEFAULT_CENTER)
                 .zoom(DEFAULT_ZOOM)
                 .build()
-            refreshPinPositions(map, latestPins)
+            refreshDisplayItems(map, latestPins)
             map.addOnCameraIdleListener {
-                refreshPinPositions(map, latestPins)
+                refreshDisplayItems(map, latestPins)
+            }
+            map.addOnCameraMoveListener {
+                refreshDisplayItems(map, latestPins)
             }
         }
     }
@@ -181,9 +245,10 @@ fun MapLibreMapView(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            latestCameraActions.map = null
             mapRef = null
             mapStyle = null
-            pinPositions = emptyList()
+            displayItems = emptyList()
             hasPerformedInitialZoom = false
             mapView.onDestroy()
         }
@@ -204,10 +269,10 @@ fun MapLibreMapView(
         hasPerformedInitialZoom = true
     }
 
-    DisposableEffect(pins, mapRef) {
+    DisposableEffect(pins, mapRef, clusterRadiusPx) {
         val map = mapRef
         if (map != null) {
-            refreshPinPositions(map, pins)
+            refreshDisplayItems(map, pins)
         }
         onDispose { }
     }
@@ -262,18 +327,64 @@ fun MapLibreMapView(
             },
         )
 
-        pinPositions.forEach { position ->
-            MapPinOverlay(
-                pin = position.pin,
-                modifier = Modifier.offset {
-                    IntOffset(
-                        (position.xPx - 24.dp.toPx()).roundToInt(),
-                        (position.yPx - 40.dp.toPx()).roundToInt(),
+        displayItems.forEach { item ->
+            when (item) {
+                is MapPinDisplayItem.Single -> {
+                    MapPinOverlay(
+                        pin = item.pin,
+                        modifier = Modifier.offset {
+                            IntOffset(
+                                (item.xPx - 24.dp.toPx()).roundToInt(),
+                                (item.yPx - 40.dp.toPx()).roundToInt(),
+                            )
+                        },
+                        onClick = { latestOnPinClick(item.pin.id) },
                     )
-                },
-                onClick = { latestOnPinClick(position.pin.id) },
-            )
+                }
+                is MapPinDisplayItem.Cluster -> {
+                    MapClusterOverlay(
+                        count = item.count,
+                        modifier = Modifier.offset {
+                            IntOffset(
+                                (item.xPx - 22.dp.toPx()).roundToInt(),
+                                (item.yPx - 22.dp.toPx()).roundToInt(),
+                            )
+                        },
+                        onClick = {
+                            val map = mapRef ?: return@MapClusterOverlay
+                            forceExpandedPinIds = item.pins.map { it.id }.toSet()
+                            expandCluster(map, item)
+                            refreshDisplayItems(map, latestPins)
+                        },
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun MapClusterOverlay(
+    count: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val clusterColor = Color(0xFF2563EB)
+    Box(
+        modifier = modifier
+            .size(44.dp)
+            .shadow(6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(clusterColor)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = count.toString(),
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -388,3 +499,252 @@ private fun focusCameraOnPins(map: MapLibreMap, pins: List<MapVehiclePin>, zoom:
 private const val PIN_FOCUS_ZOOM = 13.0
 private const val SEARCH_AREA_ZOOM = 13.0
 private const val PIN_BOUNDS_PADDING_PX = 120
+private const val ZOOM_STEP = 1.0
+private const val CLUSTER_RADIUS_DP = 56f
+/** Bu zoom ve üzerinde clustering tamamen kapalı; tüm pinler tek tek gösterilir. */
+private const val CLUSTER_MAX_ZOOM = 13.0
+/** Bu zoom ve üzerinde 2 pin asla kümeleşmez; yalnızca 3+ pin küme olabilir. */
+private const val CLUSTER_MIN_COUNT_ZOOM = 11.5
+private const val CLUSTER_REFERENCE_ZOOM = 11.0
+private const val CLUSTER_ZOOM_STEP = 2.0
+private const val CLUSTER_EXPAND_PADDING_PX = 160
+private const val CLUSTER_RECLUSTER_ZOOM = 10.5
+private const val CLUSTER_SPREAD_ZOOM = 11.0
+private const val PIN_SPREAD_SEPARATION_FACTOR = 0.9f
+
+private fun expandCluster(map: MapLibreMap, cluster: MapPinDisplayItem.Cluster) {
+    val pins = cluster.pins
+    if (pins.isEmpty()) return
+
+    if (pins.size == 1) {
+        val pin = pins.first()
+        map.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                LatLng(pin.latitude, pin.longitude),
+                CLUSTER_MAX_ZOOM.coerceAtMost(map.maxZoomLevel),
+            ),
+        )
+        return
+    }
+
+    val boundsBuilder = LatLngBounds.Builder()
+    pins.forEach { pin ->
+        boundsBuilder.include(LatLng(pin.latitude, pin.longitude))
+    }
+
+    val padding = intArrayOf(
+        CLUSTER_EXPAND_PADDING_PX,
+        CLUSTER_EXPAND_PADDING_PX,
+        CLUSTER_EXPAND_PADDING_PX,
+        CLUSTER_EXPAND_PADDING_PX,
+    )
+
+    try {
+        val fitted = map.getCameraForLatLngBounds(boundsBuilder.build(), padding) ?: throw IllegalStateException()
+        val targetZoom = fitted.zoom
+            .coerceAtLeast(CLUSTER_MAX_ZOOM)
+            .coerceAtMost(map.maxZoomLevel)
+        map.animateCamera(
+            CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(fitted.target)
+                    .zoom(targetZoom)
+                    .bearing(fitted.bearing)
+                    .tilt(fitted.tilt)
+                    .build(),
+            ),
+        )
+    } catch (_: Exception) {
+        map.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                LatLng(cluster.centerLat, cluster.centerLng),
+                CLUSTER_MAX_ZOOM.coerceAtMost(map.maxZoomLevel),
+            ),
+        )
+    }
+}
+
+private fun clusterRadiusForZoom(baseRadiusPx: Float, zoom: Double): Float {
+    val scale = 2.0.pow(CLUSTER_REFERENCE_ZOOM - zoom)
+    return (baseRadiusPx * scale.toFloat()).coerceIn(baseRadiusPx * 0.08f, baseRadiusPx * 2.5f)
+}
+
+private fun clusterPins(
+    positions: List<PinScreenPosition>,
+    baseRadiusPx: Float,
+    zoom: Double,
+    forceExpandedPinIds: Set<String> = emptySet(),
+): List<MapPinDisplayItem> {
+    if (positions.isEmpty()) return emptyList()
+
+    val expandedSingles = positions
+        .filter { it.pin.id in forceExpandedPinIds }
+        .map { MapPinDisplayItem.Single(it.pin, it.xPx, it.yPx) }
+
+    val clusterable = positions.filter { it.pin.id !in forceExpandedPinIds }
+    if (clusterable.isEmpty()) return expandedSingles
+
+    if (zoom >= CLUSTER_MAX_ZOOM) {
+        return expandedSingles + clusterable.map { MapPinDisplayItem.Single(it.pin, it.xPx, it.yPx) }
+    }
+
+    val radiusPx = clusterRadiusForZoom(baseRadiusPx, zoom)
+    val minClusterSize = if (zoom >= CLUSTER_MIN_COUNT_ZOOM) 3 else 2
+
+    val count = clusterable.size
+    val parent = IntArray(count) { it }
+
+    fun find(index: Int): Int {
+        var root = index
+        while (parent[root] != root) {
+            root = parent[root]
+        }
+        var current = index
+        while (parent[current] != current) {
+            val next = parent[current]
+            parent[current] = root
+            current = next
+        }
+        return root
+    }
+
+    fun union(first: Int, second: Int) {
+        val firstRoot = find(first)
+        val secondRoot = find(second)
+        if (firstRoot != secondRoot) {
+            parent[secondRoot] = firstRoot
+        }
+    }
+
+    val radiusSquared = radiusPx * radiusPx
+    for (first in 0 until count) {
+        for (second in first + 1 until count) {
+            val deltaX = clusterable[first].xPx - clusterable[second].xPx
+            val deltaY = clusterable[first].yPx - clusterable[second].yPx
+            if ((deltaX * deltaX) + (deltaY * deltaY) <= radiusSquared) {
+                union(first, second)
+            }
+        }
+    }
+
+    val groups = linkedMapOf<Int, MutableList<Int>>()
+    for (index in 0 until count) {
+        groups.getOrPut(find(index)) { mutableListOf() }.add(index)
+    }
+
+    val clusteredItems = groups.values.flatMap { indices ->
+        when {
+            indices.size == 1 -> {
+                val position = clusterable[indices.first()]
+                listOf(MapPinDisplayItem.Single(position.pin, position.xPx, position.yPx))
+            }
+            indices.size < minClusterSize -> {
+                indices.map { index ->
+                    val position = clusterable[index]
+                    MapPinDisplayItem.Single(position.pin, position.xPx, position.yPx)
+                }
+            }
+            else -> {
+                val clusterPins = indices.map { clusterable[it].pin }
+                val centerX = indices.map { clusterable[it].xPx }.average().toFloat()
+                val centerY = indices.map { clusterable[it].yPx }.average().toFloat()
+                listOf(
+                    MapPinDisplayItem.Cluster(
+                        pins = clusterPins,
+                        xPx = centerX,
+                        yPx = centerY,
+                        count = indices.size,
+                    ),
+                )
+            }
+        }
+    }
+
+    return expandedSingles + clusteredItems
+}
+
+private fun applySpiderSpread(
+    items: List<MapPinDisplayItem>,
+    separationPx: Float,
+    zoom: Double,
+): List<MapPinDisplayItem> {
+    if (zoom < CLUSTER_SPREAD_ZOOM) return items
+
+    val clusters = items.filterIsInstance<MapPinDisplayItem.Cluster>()
+    val singles = items.filterIsInstance<MapPinDisplayItem.Single>()
+    if (singles.size <= 1) return items
+
+    val spreadSingles = spreadOverlappingPositions(
+        positions = singles.map { PinScreenPosition(it.pin, it.xPx, it.yPx) },
+        separationPx = separationPx,
+    ).map { MapPinDisplayItem.Single(it.pin, it.xPx, it.yPx) }
+
+    return spreadSingles + clusters
+}
+
+private fun spreadOverlappingPositions(
+    positions: List<PinScreenPosition>,
+    separationPx: Float,
+): List<PinScreenPosition> {
+    if (positions.size <= 1) return positions
+
+    val count = positions.size
+    val parent = IntArray(count) { it }
+
+    fun find(index: Int): Int {
+        var root = index
+        while (parent[root] != root) {
+            root = parent[root]
+        }
+        var current = index
+        while (parent[current] != current) {
+            val next = parent[current]
+            parent[current] = root
+            current = next
+        }
+        return root
+    }
+
+    fun union(first: Int, second: Int) {
+        val firstRoot = find(first)
+        val secondRoot = find(second)
+        if (firstRoot != secondRoot) {
+            parent[secondRoot] = firstRoot
+        }
+    }
+
+    val separationSquared = separationPx * separationPx
+    for (first in 0 until count) {
+        for (second in first + 1 until count) {
+            val deltaX = positions[first].xPx - positions[second].xPx
+            val deltaY = positions[first].yPx - positions[second].yPx
+            if ((deltaX * deltaX) + (deltaY * deltaY) <= separationSquared) {
+                union(first, second)
+            }
+        }
+    }
+
+    val groups = linkedMapOf<Int, MutableList<Int>>()
+    for (index in 0 until count) {
+        groups.getOrPut(find(index)) { mutableListOf() }.add(index)
+    }
+
+    val result = positions.toMutableList()
+    groups.values.forEach { group ->
+        if (group.size <= 1) return@forEach
+
+        val centerX = group.map { positions[it].xPx }.average().toFloat()
+        val centerY = group.map { positions[it].yPx }.average().toFloat()
+        val radius = separationPx * 0.85f
+
+        group.forEachIndexed { index, positionIndex ->
+            val angle = (2.0 * PI * index / group.size) - (PI / 2.0)
+            result[positionIndex] = positions[positionIndex].copy(
+                xPx = centerX + (radius * cos(angle)).toFloat(),
+                yPx = centerY + (radius * sin(angle)).toFloat(),
+            )
+        }
+    }
+
+    return result
+}
