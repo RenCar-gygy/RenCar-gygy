@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.data.auth
 
+import com.turkcell.rencarapp.data.network.ApiException
 import com.turkcell.rencarapp.data.network.api.AuthApi
 import com.turkcell.rencarapp.data.network.dto.AuthResponseDto
 import com.turkcell.rencarapp.data.network.dto.RefreshTokenDto
@@ -27,6 +28,12 @@ class AuthorizedRequestExecutor @Inject constructor(
             ?: return Result.failure(IllegalStateException("Oturum bulunamadı."))
 
         return runAuthorized(block, session.accessToken, session, retryOnUnauthorized = true)
+    }
+
+    /** Socket.IO gibi HTTP dışı istemcilerde connect_error sonrası oturum tazeleme için. */
+    suspend fun refreshCurrentSession(): AuthTokens? {
+        val session = sessionStore.getSession() ?: return null
+        return refreshSession(session)
     }
 
     private suspend fun <T> runAuthorized(
@@ -101,12 +108,16 @@ class AuthorizedRequestExecutor @Inject constructor(
 
     private fun bearer(accessToken: String): String = "Bearer $accessToken"
 
-    private fun httpErrorMessage(exception: HttpException): String =
-        when (exception.code()) {
+    private fun httpErrorMessage(exception: HttpException): ApiException {
+        val message = when (exception.code()) {
             401 -> "Kimlik doğrulama başarısız."
             403 -> "Bu işlem için yetkiniz yok."
+            404 -> "İstenen kayıt bulunamadı."
+            409 -> "Bu işlem şu anda yapılamıyor."
             else -> "Sunucu hatası (${exception.code()})."
         }
+        return ApiException(exception.code(), message)
+    }
 
     private companion object {
         const val SESSION_EXPIRED_MESSAGE = "Oturum süresi doldu. Lütfen tekrar giriş yapın."

@@ -1,12 +1,13 @@
 package com.turkcell.rencarapp.ui.rental.confirmation
 
+import com.turkcell.rencarapp.data.rental.RentalPlan
 import com.turkcell.rencarapp.data.vehicle.Vehicle
 
 data class RentalConfirmationUiState(
     val vehicle: Vehicle? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val selectedPlan: RentalPlan = RentalPlan.MINUTELY,
+    val selectedPlan: RentalPlan = RentalPlan.PER_MINUTE,
     val isTermsAccepted: Boolean = false,
     val freeReservationTime: String = "15 dk",
     val basePriceLabel: String = "₺0,00",
@@ -18,10 +19,6 @@ data class RentalConfirmationUiState(
     val dailyPriceLabel: String = "₺1.450"
 )
 
-enum class RentalPlan {
-    MINUTELY, HOURLY, DAILY
-}
-
 sealed interface RentalConfirmationIntent {
     data object LoadVehicle : RentalConfirmationIntent
     data object BackClicked : RentalConfirmationIntent
@@ -32,9 +29,6 @@ sealed interface RentalConfirmationIntent {
 
 sealed interface RentalConfirmationEffect {
     data object NavigateBack : RentalConfirmationEffect
-
-    // GÜNCELLENDİ: Eskiden NavigateToSummary'di, artık ActiveRental'a (Kullanım Ekranı) gidecek
     data class NavigateToActiveRental(val rentalId: String) : RentalConfirmationEffect
-
     data class ShowError(val message: String) : RentalConfirmationEffect
 }

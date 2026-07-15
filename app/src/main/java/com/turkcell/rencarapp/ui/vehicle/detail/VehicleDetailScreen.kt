@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun VehicleDetailRoute(
     onNavigateBack: () -> Unit,
     onNavigateToConfirmation: (String) -> Unit,
+    onNavigateToActiveRental: (String) -> Unit,
     viewModel: VehicleDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -48,6 +49,7 @@ fun VehicleDetailRoute(
             when (effect) {
                 is VehicleDetailEffect.NavigateBack -> onNavigateBack()
                 is VehicleDetailEffect.NavigateToConfirmation -> onNavigateToConfirmation(effect.vehicleId)
+                is VehicleDetailEffect.NavigateToActiveRental -> onNavigateToActiveRental(effect.rentalId)
                 is VehicleDetailEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }

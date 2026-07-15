@@ -7,6 +7,8 @@ import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
 import com.turkcell.rencarapp.data.network.dto.RentalPhotosState
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
 import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
+import com.turkcell.rencarapp.data.network.toApiDateTimeString
+import com.turkcell.rencarapp.data.network.dto.RentalPlan as NetworkRentalPlan
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -28,12 +30,8 @@ class DefaultRentalRepository @Inject constructor(
                 authorization = authorization,
                 body = CreateRentalDto(
                     vehicleId = request.vehicleId,
-                    plan = when (request.plan) {
-                        RentalPlan.PER_MINUTE -> com.turkcell.rencarapp.data.network.dto.RentalPlan.PER_MINUTE
-                        RentalPlan.HOURLY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.HOURLY
-                        RentalPlan.DAILY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.DAILY
-                    },
-                    endDate = request.endDate?.toString()
+                    plan = request.plan.toNetwork(),
+                    endDate = request.endDate?.toApiDateTimeString()
                 )
             ).toDomain()
         }
@@ -48,12 +46,6 @@ class DefaultRentalRepository @Inject constructor(
             rentalApi.getById(authorization = authorization, id = id).toDomain()
         }
 
-    override suspend fun returnRental(id: String): Result<Rental> =
-        authorizedCall { authorization ->
-            rentalApi.returnRental(authorization = authorization, id = id).toDomain()
-        }
-
-    // YENİ EKLENEN KISIM: Araç detaylarını getiren metod
     override suspend fun getVehicleById(id: String): Result<VehicleResponseDto> =
         authorizedCall { authorization ->
             rentalApi.getVehicleById(authorization = authorization, id = id)
@@ -66,8 +58,15 @@ class DefaultRentalRepository @Inject constructor(
     ): Result<RentalPhotosState> {
         val bytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
             ?: return Result.failure(Exception("Dosya okunamadı."))
+        return uploadPhotoBytes(rentalId, side, bytes)
+    }
 
-        return authorizedCall { authorization ->
+    override suspend fun uploadPhotoBytes(
+        rentalId: String,
+        side: String,
+        bytes: ByteArray
+    ): Result<RentalPhotosState> =
+        authorizedCall { authorization ->
             rentalApi.uploadPhoto(
                 authorization = authorization,
                 id = rentalId,
@@ -79,7 +78,6 @@ class DefaultRentalRepository @Inject constructor(
                 )
             )
         }
-    }
 
     override suspend fun getPhotos(rentalId: String): Result<RentalPhotosState> =
         authorizedCall { authorization ->
@@ -101,6 +99,11 @@ class DefaultRentalRepository @Inject constructor(
             rentalApi.finish(authorization = authorization, id = rentalId).toDomain()
         }
 
+    override suspend fun cancel(rentalId: String): Result<Unit> =
+        authorizedCall { authorization ->
+            rentalApi.cancel(authorization = authorization, id = rentalId)
+        }
+
     private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> =
         authorizedRequestExecutor.execute(block)
 
@@ -109,18 +112,34 @@ class DefaultRentalRepository @Inject constructor(
             id = id,
             userId = userId,
             vehicleId = vehicleId,
+            plan = plan.toDomainPlan(),
             startDate = Instant.parse(startedAt),
-            endDate = endDate?.let { Instant.parse(it) } ?: Instant.now(),
+            endDate = endedAt?.let { Instant.parse(it) } ?: endDate?.let { Instant.parse(it) },
             totalPrice = totalPrice ?: 0.0,
+            startFee = startFee,
+            serviceFee = serviceFee ?: 0.0,
+            distanceKm = distanceKm,
+            durationMinutes = durationMinutes,
             status = status.toRentalStatus(),
+            paymentStatus = paymentStatus,
+            vehicleBrand = vehicle.brand,
+            vehicleModel = vehicle.model,
+            vehiclePlate = vehicle.plate,
         )
+
+    private fun NetworkRentalPlan.toDomainPlan(): RentalPlan =
+        when (this) {
+            NetworkRentalPlan.PER_MINUTE -> RentalPlan.PER_MINUTE
+            NetworkRentalPlan.HOURLY -> RentalPlan.HOURLY
+            NetworkRentalPlan.DAILY -> RentalPlan.DAILY
+        }
 
     private fun String.toRentalStatus(): RentalStatus =
         when (uppercase()) {
             RentalStatus.ACTIVE.name -> RentalStatus.ACTIVE
             RentalStatus.COMPLETED.name -> RentalStatus.COMPLETED
             RentalStatus.CANCELLED.name -> RentalStatus.CANCELLED
-            RentalStatus.PREPARING.name -> RentalStatus.PREPARING // DTO'nda bu da vardı, eklemekte fayda var
+            RentalStatus.PREPARING.name -> RentalStatus.PREPARING
             else -> RentalStatus.ACTIVE
         }
 }

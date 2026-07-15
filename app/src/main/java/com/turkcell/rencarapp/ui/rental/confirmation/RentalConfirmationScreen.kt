@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.turkcell.rencarapp.data.rental.RentalPlan
 @Composable
 fun RentalConfirmationRoute(
     onNavigateBack: () -> Unit,
@@ -199,8 +200,8 @@ fun RentalConfirmationScreen(
                     PlanItem(
                         title = "Dakikalık",
                         price = state.minutelyPriceLabel,
-                        isSelected = state.selectedPlan == RentalPlan.MINUTELY,
-                        onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.MINUTELY)) },
+                        isSelected = state.selectedPlan == RentalPlan.PER_MINUTE,
+                        onClick = { onIntent(RentalConfirmationIntent.PlanSelected(RentalPlan.PER_MINUTE)) },
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(12.dp))

@@ -16,6 +16,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 /**
@@ -29,6 +30,11 @@ import javax.inject.Singleton
 object NetworkModule {
 
     private const val BASE_URL = "https://rencarv2.halitkalayci.com/"
+
+    @Provides
+    @Singleton
+    @Named("socketLocationsUrl")
+    fun provideSocketLocationsUrl(): String = BASE_URL.trimEnd('/') + "/ws/locations"
 
     @Provides
     @Singleton

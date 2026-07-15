@@ -1,5 +1,7 @@
 package com.turkcell.rencarapp.data.vehicle
 
+import com.turkcell.rencarapp.data.rental.RentalPlan
+
 enum class VehicleType {
     SEDAN,
     SUV,
@@ -56,7 +58,7 @@ interface VehicleRepository {
 
     suspend fun getQuote(
         id: String,
-        plan: com.turkcell.rencarapp.data.network.dto.RentalPlan,
+        plan: RentalPlan,
         minutes: Int
     ): Result<com.turkcell.rencarapp.data.network.dto.Quote>
 }

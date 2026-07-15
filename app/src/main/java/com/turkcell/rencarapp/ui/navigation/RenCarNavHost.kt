@@ -33,8 +33,10 @@ import com.turkcell.rencarapp.ui.splash.SplashRoute
 
 import com.turkcell.rencarapp.ui.payment.wallet.WalletRoute
 import com.turkcell.rencarapp.ui.rental.active.ActiveRentalRoute
+import com.turkcell.rencarapp.ui.rental.active.ActiveRentalViewModel
 import com.turkcell.rencarapp.ui.rental.confirmation.RentalConfirmationRoute
 import com.turkcell.rencarapp.ui.rental.delivery_photos.DeliveryPhotosRoute
+import com.turkcell.rencarapp.ui.rental.start_photos.StartPhotosRoute
 import com.turkcell.rencarapp.ui.vehicle.detail.VehicleDetailRoute
 import com.turkcell.rencarapp.ui.rental.history.RentalHistoryRoute
 import com.turkcell.rencarapp.ui.rental.summary.RentalSummaryRoute
@@ -257,6 +259,9 @@ fun RenCarNavHost(
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToConfirmation = { vehicleId ->
                                 navController.navigate(RenCarDestination.rentalConfirmationRoute(vehicleId))
+                            },
+                            onNavigateToActiveRental = { rentalId ->
+                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
                             }
                         )
                     }
@@ -285,14 +290,47 @@ fun RenCarNavHost(
                         ),
                     ) {
                         ActiveRentalRoute(
-                            // GÜNCELLENDİ: Kiralama bitirildiğinde fotoğraf çekim ekranına geçer
-                            onNavigateToDeliveryPhotos = { rentalId, name, plate ->
-                                navController.navigate(RenCarDestination.deliveryPhotosRoute(rentalId, name, plate))
+                            onNavigateToStartPhotos = { rentalId, name, plate ->
+                                navController.navigate(RenCarDestination.startPhotosRoute(rentalId, name, plate))
+                            },
+                            onNavigateToSummary = { rentalId ->
+                                navController.navigate(RenCarDestination.rentalSummaryRoute(rentalId))
+                            },
+                            onNavigateBackAfterCancel = {
+                                navController.popBackStack(RenCarDestination.Map, false)
                             }
                         )
                     }
 
-                    // 4. ADIM: Araç Fotoğrafları Çekimi (Teslim ederken)
+                    // 3b. ADIM: Yolculuk öncesi fotoğraflar (dk/sa — API zorunlu)
+                    composable(
+                        route = RenCarDestination.StartPhotos,
+                        arguments = listOf(
+                            navArgument(RenCarDestination.ARG_RENTAL_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_VEHICLE_NAME) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                            navArgument(RenCarDestination.ARG_VEHICLE_PLATE) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                        ),
+                    ) {
+                        StartPhotosRoute(
+                            onNavigateBack = { navController.popBackStack() },
+                            onRideStarted = {
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(ActiveRentalViewModel.RIDE_STARTED_KEY, true)
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+
+                    // 4. ADIM: Araç Fotoğrafları Çekimi (Teslim — ürün stub, API karşılığı yok)
                     composable(
                         route = RenCarDestination.DeliveryPhotos,
                         arguments = listOf(

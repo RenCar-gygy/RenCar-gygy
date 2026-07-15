@@ -1,5 +1,7 @@
 package com.turkcell.rencarapp.data.vehicle
 
+import com.turkcell.rencarapp.data.rental.RentalPlan
+import com.turkcell.rencarapp.data.rental.toNetwork
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -68,14 +70,14 @@ class FakeVehicleRepository @Inject constructor() : VehicleRepository {
 
     override suspend fun getQuote(
         id: String,
-        plan: com.turkcell.rencarapp.data.network.dto.RentalPlan,
+        plan: RentalPlan,
         minutes: Int
     ): Result<com.turkcell.rencarapp.data.network.dto.Quote> {
         delay(FAKE_DELAY_MS)
         return Result.success(
             com.turkcell.rencarapp.data.network.dto.Quote(
                 vehicleId = id,
-                plan = plan,
+                plan = plan.toNetwork(),
                 minutes = minutes,
                 usageFee = 135.0,
                 startFee = 15.0,

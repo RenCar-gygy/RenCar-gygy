@@ -3,6 +3,8 @@ package com.turkcell.rencarapp.data.vehicle
 import com.turkcell.rencarapp.data.auth.AuthorizedRequestExecutor
 import com.turkcell.rencarapp.data.network.api.VehicleApi
 import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
+import com.turkcell.rencarapp.data.rental.RentalPlan
+import com.turkcell.rencarapp.data.rental.toNetwork
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,14 +36,14 @@ class DefaultVehicleRepository @Inject constructor(
 
     override suspend fun getQuote(
         id: String,
-        plan: com.turkcell.rencarapp.data.network.dto.RentalPlan,
+        plan: RentalPlan,
         minutes: Int
     ): Result<com.turkcell.rencarapp.data.network.dto.Quote> =
         authorizedCall { authorization ->
             vehicleApi.getQuote(
                 authorization = authorization,
                 id = id,
-                plan = plan.name,
+                plan = plan.toNetwork().name,
                 minutes = minutes
             )
         }

@@ -5,6 +5,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.turkcell.rencarapp.data.network.ApiErrorContext
+import com.turkcell.rencarapp.data.network.toUserMessage
+import com.turkcell.rencarapp.data.rental.RentalPlan
+import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.rental.RentalStatus
 import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleDistanceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
@@ -24,6 +29,7 @@ import javax.inject.Inject
 class VehicleDetailViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
     private val reservationRepository: ReservationRepository,
+    private val rentalRepository: RentalRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -62,9 +68,34 @@ class VehicleDetailViewModel @Inject constructor(
 
     private fun reserveVehicle() {
         if (_uiState.value.isReserving) return
-        
+
         viewModelScope.launch {
             _uiState.update { it.copy(isReserving = true) }
+
+            val preflightError = resolveReservationBlocker()
+            if (preflightError != null) {
+                when (preflightError) {
+                    is ReservationBlocker.ResumeConfirmation -> {
+                        _uiState.update { it.copy(isReserving = false) }
+                        _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId))
+                    }
+                    is ReservationBlocker.OpenRental -> {
+                        _uiState.update { it.copy(isReserving = false) }
+                        _effect.send(
+                            VehicleDetailEffect.ShowMessage(
+                                "Devam eden bir kiralamanız var. Önce tamamlayın veya iptal edin."
+                            )
+                        )
+                        _effect.send(VehicleDetailEffect.NavigateToActiveRental(preflightError.rentalId))
+                    }
+                    is ReservationBlocker.Message -> {
+                        _uiState.update { it.copy(isReserving = false) }
+                        _effect.send(VehicleDetailEffect.ShowMessage(preflightError.text))
+                    }
+                }
+                return@launch
+            }
+
             reservationRepository.create(vehicleId)
                 .onSuccess {
                     _uiState.update { it.copy(isReserving = false) }
@@ -72,12 +103,47 @@ class VehicleDetailViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isReserving = false) }
-                    _effect.send(VehicleDetailEffect.ShowMessage(error.message ?: "Rezervasyon başarısız."))
+                    _effect.send(
+                        VehicleDetailEffect.ShowMessage(
+                            error.toUserMessage(ApiErrorContext.RESERVATION_CREATE)
+                        )
+                    )
                 }
         }
     }
 
-    private fun loadQuote(plan: com.turkcell.rencarapp.data.network.dto.RentalPlan, minutes: Int) {
+    private suspend fun resolveReservationBlocker(): ReservationBlocker? {
+        reservationRepository.getActive().getOrNull()?.let { reservation ->
+            return if (reservation.vehicleId == vehicleId) {
+                ReservationBlocker.ResumeConfirmation
+            } else {
+                ReservationBlocker.Message(
+                    "Başka bir araç için aktif rezervasyonunuz var (${reservation.vehicle.plate}). " +
+                        "Önce rezervasyon onay ekranından geri dönerek iptal edin."
+                )
+            }
+        }
+
+        rentalRepository.getActive().getOrNull()?.let { activeRental ->
+            return ReservationBlocker.OpenRental(activeRental.id)
+        }
+
+        rentalRepository.listMine().getOrNull()
+            ?.firstOrNull { it.status == RentalStatus.PREPARING }
+            ?.let { preparingRental ->
+                return ReservationBlocker.OpenRental(preparingRental.id)
+            }
+
+        return null
+    }
+
+    private sealed interface ReservationBlocker {
+        data object ResumeConfirmation : ReservationBlocker
+        data class OpenRental(val rentalId: String) : ReservationBlocker
+        data class Message(val text: String) : ReservationBlocker
+    }
+
+    private fun loadQuote(plan: RentalPlan, minutes: Int) {
         viewModelScope.launch {
             vehicleRepository.getQuote(vehicleId, plan, minutes)
                 .onSuccess { quote ->
@@ -128,16 +194,20 @@ class VehicleDetailViewModel @Inject constructor(
                     }
                     
                     // Varsayılan quote yükle
-                    loadQuote(com.turkcell.rencarapp.data.network.dto.RentalPlan.PER_MINUTE, 30)
+                    loadQuote(RentalPlan.PER_MINUTE, 30)
                 }
                 .onFailure { exception ->
                     _uiState.update { 
                         it.copy(
                             isLoading = false,
-                            error = exception.message ?: "Araç bilgileri alınamadı."
+                            error = exception.toUserMessage(ApiErrorContext.VEHICLE_DETAIL)
                         ) 
                     }
-                    _effect.send(VehicleDetailEffect.ShowMessage(exception.message ?: "Hata oluştu."))
+                    _effect.send(
+                        VehicleDetailEffect.ShowMessage(
+                            exception.toUserMessage(ApiErrorContext.VEHICLE_DETAIL)
+                        )
+                    )
                 }
         }
     }

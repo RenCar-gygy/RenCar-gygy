@@ -128,6 +128,7 @@ fun MapLibreMapView(
     focusSearchArea: Boolean = false,
     onSearchAreaFocused: () -> Unit = {},
     gesturesEnabled: Boolean = true,
+    followLocationWithPan: Boolean = false,
     pinFocusZoom: Double = PIN_FOCUS_ZOOM,
     modifier: Modifier = Modifier,
 ) {
@@ -144,6 +145,7 @@ fun MapLibreMapView(
     val latestFocusSearchArea by rememberUpdatedState(focusSearchArea)
     val latestOnSearchAreaFocused by rememberUpdatedState(onSearchAreaFocused)
     val latestPinFocusZoom by rememberUpdatedState(pinFocusZoom)
+    val latestFollowLocationWithPan by rememberUpdatedState(followLocationWithPan)
     val latestCameraActions by rememberUpdatedState(cameraActions)
     val density = LocalDensity.current
     val clusterRadiusPx = remember(density) { with(density) { CLUSTER_RADIUS_DP.dp.toPx() } }
@@ -152,6 +154,7 @@ fun MapLibreMapView(
     var displayItems by remember { mutableStateOf<List<MapPinDisplayItem>>(emptyList()) }
     var forceExpandedPinIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var hasPerformedInitialZoom by remember { mutableStateOf(false) }
+    var previousFollowLocation by remember { mutableStateOf<LatLng?>(null) }
 
     remember {
         MapLibre.getInstance(context.applicationContext)
@@ -281,6 +284,22 @@ fun MapLibreMapView(
         val style = mapStyle
         if (style != null) {
             updateUserLocation(style, myLocation)
+        }
+        onDispose { }
+    }
+
+    DisposableEffect(myLocation, mapRef, followLocationWithPan) {
+        val map = mapRef
+        val location = myLocation
+        if (latestFollowLocationWithPan && location != null && map != null) {
+            if (previousFollowLocation == null) {
+                map.moveCamera(
+                    CameraUpdateFactory.newLatLngZoom(location, latestPinFocusZoom),
+                )
+            } else if (previousFollowLocation != location) {
+                map.animateCamera(CameraUpdateFactory.newLatLng(location), 600)
+            }
+            previousFollowLocation = location
         }
         onDispose { }
     }

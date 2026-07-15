@@ -5,9 +5,15 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.network.ApiErrorContext
+import com.turkcell.rencarapp.data.network.toUserMessage
 import com.turkcell.rencarapp.data.rental.CreateRentalRequest
+import com.turkcell.rencarapp.data.rental.RentalPlan
 import com.turkcell.rencarapp.data.rental.RentalRepository
-import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
+import com.turkcell.rencarapp.data.rental.defaultQuoteMinutes
+import com.turkcell.rencarapp.data.rental.durationLabel
+import com.turkcell.rencarapp.data.rental.requiresScheduledEndDate
+import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -26,6 +32,7 @@ import javax.inject.Inject
 class RentalConfirmationViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
     private val rentalRepository: RentalRepository,
+    private val reservationRepository: ReservationRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,9 +51,7 @@ class RentalConfirmationViewModel @Inject constructor(
     fun onIntent(intent: RentalConfirmationIntent) {
         when (intent) {
             is RentalConfirmationIntent.LoadVehicle -> loadVehicle()
-            is RentalConfirmationIntent.BackClicked -> {
-                viewModelScope.launch { _effect.send(RentalConfirmationEffect.NavigateBack) }
-            }
+            is RentalConfirmationIntent.BackClicked -> cancelReservationAndNavigateBack()
             is RentalConfirmationIntent.PlanSelected -> {
                 _uiState.update { it.copy(selectedPlan = intent.plan) }
                 loadQuote()
@@ -55,8 +60,29 @@ class RentalConfirmationViewModel @Inject constructor(
                 _uiState.update { it.copy(isTermsAccepted = intent.accepted) }
             }
             is RentalConfirmationIntent.CompleteReservationClicked -> {
-                createRentalAndStart()
+                createRental()
             }
+        }
+    }
+
+    private fun cancelReservationAndNavigateBack() {
+        if (_uiState.value.isLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            reservationRepository.getActive()
+                .onSuccess { reservation ->
+                    reservationRepository.cancel(reservation.id)
+                        .onFailure { error ->
+                            _effect.send(
+                                RentalConfirmationEffect.ShowError(
+                                    error.toUserMessage(ApiErrorContext.RESERVATION_CANCEL)
+                                )
+                            )
+                        }
+                }
+            _uiState.update { it.copy(isLoading = false) }
+            _effect.send(RentalConfirmationEffect.NavigateBack)
         }
     }
 
@@ -79,46 +105,39 @@ class RentalConfirmationViewModel @Inject constructor(
                 }
                 .onFailure { exception ->
                     _uiState.update {
-                        it.copy(isLoading = false, error = exception.message ?: "Araç bilgileri alınamadı.")
+                        it.copy(
+                            isLoading = false,
+                            error = exception.toUserMessage(ApiErrorContext.VEHICLE_DETAIL)
+                        )
                     }
-                    _effect.send(RentalConfirmationEffect.ShowError(exception.message ?: "Hata oluştu."))
+                    _effect.send(
+                        RentalConfirmationEffect.ShowError(
+                            exception.toUserMessage(ApiErrorContext.VEHICLE_DETAIL)
+                        )
+                    )
                 }
         }
     }
 
     private fun loadQuote() {
-        val state = _uiState.value
-        val plan = when (state.selectedPlan) {
-            RentalPlan.MINUTELY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.PER_MINUTE
-            RentalPlan.HOURLY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.HOURLY
-            RentalPlan.DAILY -> com.turkcell.rencarapp.data.network.dto.RentalPlan.DAILY
-        }
-        val minutes = when (state.selectedPlan) {
-            RentalPlan.MINUTELY -> 30
-            RentalPlan.HOURLY -> 60
-            RentalPlan.DAILY -> 1440
-        }
+        val plan = _uiState.value.selectedPlan
 
         viewModelScope.launch {
-            vehicleRepository.getQuote(vehicleId, plan, minutes)
+            vehicleRepository.getQuote(vehicleId, plan, plan.defaultQuoteMinutes())
                 .onSuccess { quote ->
                     _uiState.update {
                         it.copy(
                             basePriceLabel = "₺${String.format("%.2f", quote.startFee)}",
                             serviceFeeLabel = "₺${String.format("%.2f", quote.serviceFee)}",
                             estimatedPriceLabel = "₺${String.format("%.2f", quote.estimatedTotal)}",
-                            estimatedDuration = when (state.selectedPlan) {
-                                RentalPlan.MINUTELY -> "30 dk"
-                                RentalPlan.HOURLY -> "1 sa"
-                                RentalPlan.DAILY -> "1 gün"
-                            }
+                            estimatedDuration = plan.durationLabel()
                         )
                     }
                 }
         }
     }
 
-    private fun createRentalAndStart() {
+    private fun createRental() {
         if (!_uiState.value.isTermsAccepted) {
             viewModelScope.launch {
                 _effect.send(RentalConfirmationEffect.ShowError("Lütfen kullanım şartlarını onaylayın."))
@@ -132,13 +151,7 @@ class RentalConfirmationViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             val selectedPlan = _uiState.value.selectedPlan
-            val apiPlan = when (selectedPlan) {
-                RentalPlan.MINUTELY -> com.turkcell.rencarapp.data.rental.RentalPlan.PER_MINUTE
-                RentalPlan.HOURLY -> com.turkcell.rencarapp.data.rental.RentalPlan.HOURLY
-                RentalPlan.DAILY -> com.turkcell.rencarapp.data.rental.RentalPlan.DAILY
-            }
-
-            val endDate = if (selectedPlan == RentalPlan.DAILY) {
+            val endDate = if (selectedPlan.requiresScheduledEndDate()) {
                 calculateEndDate(selectedPlan)
             } else {
                 null
@@ -146,26 +159,61 @@ class RentalConfirmationViewModel @Inject constructor(
 
             val request = CreateRentalRequest(
                 vehicleId = vehicleId,
-                plan = apiPlan,
+                plan = selectedPlan,
                 endDate = endDate
             )
 
+            ensureActiveReservationForVehicle()
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    _effect.send(
+                        RentalConfirmationEffect.ShowError(
+                            error.toUserMessage(ApiErrorContext.RESERVATION_CREATE)
+                        )
+                    )
+                    return@launch
+                }
+
             rentalRepository.create(request)
                 .onSuccess { rental ->
-                    _uiState.update { it.copy(isLoading = false) }
-                    _effect.send(RentalConfirmationEffect.NavigateToActiveRental(rental.id))
+                    navigateToActiveRental(rental.id)
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isLoading = false) }
-                    _effect.send(RentalConfirmationEffect.ShowError(error.message ?: "Kiralama başlatılamadı."))
+                    _effect.send(
+                        RentalConfirmationEffect.ShowError(
+                            error.toUserMessage(ApiErrorContext.RENTAL_CREATE)
+                        )
+                    )
                 }
         }
+    }
+
+    private suspend fun ensureActiveReservationForVehicle(): Result<Unit> {
+        val active = reservationRepository.getActive().getOrNull()
+        if (active != null) {
+            return if (active.vehicleId == vehicleId) {
+                Result.success(Unit)
+            } else {
+                Result.failure(
+                    IllegalStateException(
+                        "Aktif rezervasyonunuz başka bir araç için. Lütfen geri dönüp o aracı kullanın veya rezervasyonu iptal edin."
+                    )
+                )
+            }
+        }
+        return reservationRepository.create(vehicleId).map { }
+    }
+
+    private suspend fun navigateToActiveRental(rentalId: String) {
+        _uiState.update { it.copy(isLoading = false) }
+        _effect.send(RentalConfirmationEffect.NavigateToActiveRental(rentalId))
     }
 
     private fun calculateEndDate(plan: RentalPlan): Instant {
         val now = Instant.now()
         return when (plan) {
-            RentalPlan.MINUTELY -> now.plus(30, ChronoUnit.MINUTES)
+            RentalPlan.PER_MINUTE -> now.plus(30, ChronoUnit.MINUTES)
             RentalPlan.HOURLY -> now.plus(1, ChronoUnit.HOURS)
             RentalPlan.DAILY -> now.plus(1, ChronoUnit.DAYS)
         }
