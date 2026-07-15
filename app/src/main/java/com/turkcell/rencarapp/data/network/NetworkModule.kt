@@ -1,10 +1,8 @@
 package com.turkcell.rencarapp.data.network
 
-import com.turkcell.rencarapp.data.network.api.AuthApi
-import com.turkcell.rencarapp.data.network.api.LicenseApi
-import com.turkcell.rencarapp.data.network.api.RentalApi
-import com.turkcell.rencarapp.data.network.api.ReservationApi
-import com.turkcell.rencarapp.data.network.api.VehicleApi
+import com.turkcell.rencarapp.data.network.api.*
+import com.turkcell.rencarapp.data.wallet.CardApi
+import com.turkcell.rencarapp.data.wallet.WalletApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,12 +17,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
 
-/**
- * Sprint 0 ağ katmanı iskeleti.
- *
- * Base URL: https://rencarv2.halitkalayci.com/ (bkz. docs/decisions.md).
- * API arayüzleri Sprint 1'de Default*Repository implementasyonlarında kullanılacaktır.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -87,4 +79,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideReservationApi(retrofit: Retrofit): ReservationApi = retrofit.create(ReservationApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideWalletApi(retrofit: Retrofit): WalletApi = retrofit.create(WalletApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCardApi(retrofit: Retrofit): CardApi = retrofit.create(CardApi::class.java)
 }
