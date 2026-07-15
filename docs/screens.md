@@ -33,10 +33,11 @@
 | Ekran | Paket (planlanan) | API karşılığı | Not |
 |-------|-------------------|---------------|-----|
 | Araç Detay | `ui/vehicle/detail/` | `GET /vehicles/{id}` | Haritadan veya listeden |
-| Rezervasyon Onayı | `ui/rental/confirmation/` | `POST /rentals` hazırlığı | `vehicleId`, `endDate` |
-| Ödeme / Kiralama Özeti | `ui/rental/summary/` | `RentalResponseDto.totalPrice` | Ödeme UI stub; fiyat API'dan |
-| Araç Teslim Fotoğrafı | `ui/rental/delivery_photos/` | **Yok** | 4 yön; stub |
-| Aktif Kiralama | `ui/rental/active/` | `GET /rentals/{id}`, `POST /rentals/{id}/return` | Aktif kiralama yönetimi |
+| Rezervasyon Onayı | `ui/rental/confirmation/` | `POST /rentals` | Kiralama oluşturma (`PREPARING`) |
+| Başlangıç Fotoğrafları | `ui/rental/start_photos/` | `POST /rentals/{id}/photos` | 4 yön; kiralama öncesi zorunlu (Dk/Sa) |
+| Aktif Kiralama | `ui/rental/active/` | `GET /rentals/{id}`, `POST /rentals/{id}/finish` | Sayaç, kilit yönetimi ve bitirme |
+| Kiralama Özeti | `ui/rental/summary/` | `GET /rentals/{id}` | Kiralama sonu fatura ve detay özeti |
+| Araç Teslim Fotoğrafı | `ui/rental/delivery_photos/` | **Yok** | 4 yön; stub (API'da karşılığı yok) |
 
 ---
 
@@ -57,9 +58,10 @@ Splash
        └─ rental/  [nested, bottom bar gizli]
             ├─ vehicle_detail/{vehicleId}
             ├─ confirmation/{vehicleId}
-            ├─ summary/{vehicleId}
-            ├─ delivery_photos/{vehicleId}
-            └─ active/{rentalId}
+            ├─ start_photos/{rentalId}
+            ├─ active/{rentalId}
+            ├─ summary/{rentalId}
+            └─ delivery_photos/{rentalId}
 ```
 
 ---
@@ -84,5 +86,5 @@ Checklist'teki ön atama korunmuştur; dengeleme önerileri için bkz. ekip mesa
 | Kişi | Ekranlar | Repository / API |
 |------|----------|------------------|
 | **Furkan** | Splash, Onboarding, Login/Register, OTP, License, Ana Harita | `AuthRepository`, `LicenseRepository`, `VehicleRepository` (liste/konum) |
-| **Nazlı** | Araç Detay, Rezervasyon Onayı, Teslim Fotoğrafı, Aktif Kiralama | `VehicleRepository` (detay), `RentalRepository` |
-| **Çağla** | Ödeme/Özet, Cüzdan, Kiralama Geçmişi, Profil | `RentalRepository` (liste), `AuthRepository` (me/logout); ödeme stub |
+| **Nazlı** | Araç Detay, Rezervasyon Onayı, Başlangıç Fotoğrafları, Aktif Kiralama | `VehicleRepository` (detay), `RentalRepository` |
+| **Çağla** | Özet, Cüzdan, Kiralama Geçmişi, Profil | `RentalRepository` (liste/detay), `AuthRepository` (me/logout); ödeme stub |

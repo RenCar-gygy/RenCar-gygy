@@ -28,7 +28,23 @@ data class StartPhotosUiState(
 }
 
 sealed interface StartPhotosIntent {
-    data class PhotoBoxToggled(val direction: PhotoDirection) : StartPhotosIntent
+    data class PhotoCaptureRequested(val direction: PhotoDirection) : StartPhotosIntent
+    data class PhotoCaptured(val direction: PhotoDirection, val bytes: ByteArray) : StartPhotosIntent {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as PhotoCaptured
+            if (direction != other.direction) return false
+            if (!bytes.contentEquals(other.bytes)) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = direction.hashCode()
+            result = 31 * result + bytes.contentHashCode()
+            return result
+        }
+    }
     data object CompletePhotosClicked : StartPhotosIntent
     data object BackClicked : StartPhotosIntent
 }
@@ -36,5 +52,6 @@ sealed interface StartPhotosIntent {
 sealed interface StartPhotosEffect {
     data object NavigateBack : StartPhotosEffect
     data object RideStarted : StartPhotosEffect
+    data class LaunchCamera(val direction: PhotoDirection) : StartPhotosEffect
     data class ShowError(val message: String) : StartPhotosEffect
 }

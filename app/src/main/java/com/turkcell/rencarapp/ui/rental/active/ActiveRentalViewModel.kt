@@ -224,18 +224,18 @@ class ActiveRentalViewModel @Inject constructor(
                             }
                         } else {
                             startVehicleLocationTracking()
-                            _uiState.update {
-                                it.copy(
+                            _uiState.update { currentState ->
+                                currentState.copy(
                                     rentalId = activeRental.id,
                                     vehicleName = "${activeRental.vehicle.brand} ${activeRental.vehicle.model}",
                                     vehiclePlate = activeRental.vehicle.plate,
                                     duration = formatSeconds(activeRental.elapsedSeconds),
                                     currentPrice = String.format(Locale.getDefault(), "₺%.2f", activeRental.currentCost),
-                                    distance = String.format(Locale.getDefault(), "%.1f km", activeRental.distanceKm),
+                                    distance = if (currentState.isLocked) currentState.distance else String.format(Locale.getDefault(), "%.1f km", activeRental.distanceKm),
                                     isReservationActive = false,
                                     isPreparingRental = false,
                                     canCancelRental = false,
-                                    isVehicleLocationPending = it.vehicleLatitude == null,
+                                    isVehicleLocationPending = currentState.vehicleLatitude == null,
                                     remainingReservationSeconds = null,
                                     isLoading = false,
                                     error = null,
@@ -393,12 +393,14 @@ class ActiveRentalViewModel @Inject constructor(
         locationJob = viewModelScope.launch {
             rideLocationClient.vehiclePositionStream()
                 .collect { point ->
-                    _uiState.update {
-                        it.copy(
-                            vehicleLatitude = point.latitude,
-                            vehicleLongitude = point.longitude,
-                            isVehicleLocationPending = false,
-                        )
+                    if (!_uiState.value.isLocked) {
+                        _uiState.update {
+                            it.copy(
+                                vehicleLatitude = point.latitude,
+                                vehicleLongitude = point.longitude,
+                                isVehicleLocationPending = false,
+                            )
+                        }
                     }
                 }
         }

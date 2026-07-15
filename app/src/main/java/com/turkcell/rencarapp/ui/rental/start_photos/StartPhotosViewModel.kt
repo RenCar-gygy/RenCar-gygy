@@ -49,8 +49,11 @@ class StartPhotosViewModel @Inject constructor(
 
     fun onIntent(intent: StartPhotosIntent) {
         when (intent) {
-            is StartPhotosIntent.PhotoBoxToggled -> togglePhotoBox(intent.direction)
-            is StartPhotosIntent.CompletePhotosClicked -> submitPhotosAndStart()
+            is StartPhotosIntent.PhotoCaptureRequested -> {
+                viewModelScope.launch { _effect.send(StartPhotosEffect.LaunchCamera(intent.direction)) }
+            }
+            is StartPhotosIntent.PhotoCaptured -> uploadCapturedPhoto(intent.direction, intent.bytes)
+            is StartPhotosIntent.CompletePhotosClicked -> startRental()
             is StartPhotosIntent.BackClicked -> {
                 viewModelScope.launch { _effect.send(StartPhotosEffect.NavigateBack) }
             }
@@ -101,40 +104,34 @@ class StartPhotosViewModel @Inject constructor(
         }
     }
 
-    private fun togglePhotoBox(direction: PhotoDirection) {
-        val updatedPhotos = _uiState.value.photos.toMutableMap()
-        updatedPhotos[direction] = if (updatedPhotos[direction] == null) {
-            MARKED_PHOTO_URI
-        } else {
-            null
+    private fun uploadCapturedPhoto(direction: PhotoDirection, bytes: ByteArray) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingPhotos = true, error = null) }
+
+            rentalRepository.uploadPhotoBytes(
+                rentalId = rentalId,
+                side = direction.name,
+                bytes = bytes
+            ).onSuccess {
+                val updatedPhotos = _uiState.value.photos.toMutableMap()
+                updatedPhotos[direction] = MARKED_PHOTO_URI
+                _uiState.update { it.copy(photos = updatedPhotos, isSubmittingPhotos = false) }
+            }.onFailure { error ->
+                _uiState.update { it.copy(isSubmittingPhotos = false) }
+                _effect.send(
+                    StartPhotosEffect.ShowError(
+                        error.toUserMessage(ApiErrorContext.RENTAL_PHOTO)
+                    )
+                )
+            }
         }
-        _uiState.update { it.copy(photos = updatedPhotos) }
     }
 
-    private fun submitPhotosAndStart() {
+    private fun startRental() {
         if (!_uiState.value.isComplete || _uiState.value.isSubmittingPhotos) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingPhotos = true, error = null) }
-
-            for (direction in PhotoDirection.entries) {
-                val uploadResult = rentalRepository.uploadPhotoBytes(
-                    rentalId = rentalId,
-                    side = direction.name,
-                    bytes = RentalPhotoStub.JPEG_BYTES
-                )
-                if (uploadResult.isFailure) {
-                    _uiState.update { it.copy(isSubmittingPhotos = false) }
-                    _effect.send(
-                        StartPhotosEffect.ShowError(
-                            uploadResult.exceptionOrNull()
-                                ?.toUserMessage(ApiErrorContext.RENTAL_PHOTO)
-                                ?: "Fotoğraf yüklenemedi."
-                        )
-                    )
-                    return@launch
-                }
-            }
 
             rentalRepository.start(rentalId)
                 .onSuccess {
