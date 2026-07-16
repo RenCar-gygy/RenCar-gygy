@@ -1,8 +1,8 @@
 package com.turkcell.rencarapp.ui.rental.delivery_photos
 
-import androidx.activity.compose.BackHandler
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,8 +28,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.turkcell.rencarapp.ui.common.rememberJpegPhotoCaptureLauncher
+import java.io.File
 
 @Composable
 fun DeliveryPhotosRoute(
@@ -36,6 +42,29 @@ fun DeliveryPhotosRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var pendingDirection by remember { mutableStateOf<PhotoDirection?>(null) }
+
+    val launchCamera = rememberJpegPhotoCaptureLauncher(
+        onPhotoCaptured = { bytes ->
+            val direction = pendingDirection
+            pendingDirection = null
+            if (direction == null) return@rememberJpegPhotoCaptureLauncher
+            val file = File(context.cacheDir, "delivery_${direction.name}_${System.currentTimeMillis()}.jpg")
+            file.writeBytes(bytes)
+            val previewUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file,
+            )
+            viewModel.onIntent(DeliveryPhotosIntent.PhotoCaptured(direction, previewUri))
+        },
+        onCancelled = { pendingDirection = null },
+    )
+
+    fun requestCamera(direction: PhotoDirection) {
+        pendingDirection = direction
+        launchCamera()
+    }
 
     BackHandler {
         viewModel.onIntent(DeliveryPhotosIntent.BackClicked)
@@ -46,6 +75,7 @@ fun DeliveryPhotosRoute(
             when (effect) {
                 is DeliveryPhotosEffect.NavigateBack -> onNavigateBack()
                 is DeliveryPhotosEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
+                is DeliveryPhotosEffect.LaunchCamera -> requestCamera(effect.direction)
                 is DeliveryPhotosEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -162,6 +192,21 @@ fun DeliveryPhotosScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text(
+                    text = "Ürün stub — API karşılığı yok. Fotoğraflar yalnızca cihazda önizlenir; sunucuya yüklenmez.",
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(
@@ -192,7 +237,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.FRONT,
                         uri = state.photos[PhotoDirection.FRONT],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.FRONT))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptureRequested(PhotoDirection.FRONT))
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -201,7 +246,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.BACK,
                         uri = state.photos[PhotoDirection.BACK],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.BACK))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptureRequested(PhotoDirection.BACK))
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -212,7 +257,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.LEFT,
                         uri = state.photos[PhotoDirection.LEFT],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.LEFT))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptureRequested(PhotoDirection.LEFT))
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -221,7 +266,7 @@ fun DeliveryPhotosScreen(
                         direction = PhotoDirection.RIGHT,
                         uri = state.photos[PhotoDirection.RIGHT],
                         onClick = {
-                            onIntent(DeliveryPhotosIntent.PhotoBoxToggled(PhotoDirection.RIGHT))
+                            onIntent(DeliveryPhotosIntent.PhotoCaptureRequested(PhotoDirection.RIGHT))
                         },
                         modifier = Modifier.weight(1f)
                     )

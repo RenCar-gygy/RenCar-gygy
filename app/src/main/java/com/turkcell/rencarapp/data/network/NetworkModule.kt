@@ -1,8 +1,6 @@
 package com.turkcell.rencarapp.data.network
 
 import com.turkcell.rencarapp.data.network.api.*
-import com.turkcell.rencarapp.data.wallet.CardApi
-import com.turkcell.rencarapp.data.wallet.WalletApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

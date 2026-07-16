@@ -36,7 +36,9 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +74,7 @@ import com.turkcell.rencarapp.ui.theme.RenCarAppTheme
 private val RenCarBlue = Color(0xFF2563EB)
 private val RenCarBlueGlow = Color(0x662563EB)
 private val SuccessGreen = Color(0xFF22C55E)
+private val ErrorRed = Color(0xFFEF4444)
 
 private data class LicenseStep(val label: String)
 
@@ -295,6 +298,11 @@ fun LicenseScreen(
                 )
             }
 
+            if (state.isAwaitingApproval) {
+                Spacer(modifier = Modifier.height(16.dp))
+                LicenseUnderReviewBanner(colors = colors)
+            }
+
             Spacer(modifier = Modifier.height(28.dp))
 
             Text(
@@ -397,10 +405,28 @@ fun LicenseScreen(
             ),
         ) {
             Text(
-                text = "Devam Et",
+                text = if (state.isAwaitingApproval) "Onay Bekleniyor" else "Devam Et",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
             )
+        }
+
+        if (state.isAwaitingApproval) {
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(
+                onClick = { onIntent(LicenseIntent.CancelRequestClicked) },
+                enabled = !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+            ) {
+                Text(
+                    text = "Talebi İptal Et",
+                    color = ErrorRed,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -538,6 +564,40 @@ private fun LicenseCapturedImagePreview(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LicenseUnderReviewBanner(colors: LicenseColors) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.infoBackground)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = RenCarBlue,
+            modifier = Modifier.size(20.dp),
+        )
+        Column {
+            Text(
+                text = "Ehliyet doğrulama talebiniz inceleniyor",
+                color = colors.infoText,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Onaylandıktan sonra «Devam Et» ile uygulamaya geçebilirsiniz.",
+                color = colors.infoText,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
             )
         }
     }
@@ -875,6 +935,23 @@ private fun LicenseInfoBanner(colors: LicenseColors) {
 private fun LicenseScreenLightPreview() {
     RenCarAppTheme(darkTheme = false, dynamicColor = false) {
         LicenseScreen(state = LicenseUiState(), onIntent = {})
+    }
+}
+
+@Preview(showBackground = true, name = "License Under Review")
+@Composable
+private fun LicenseScreenUnderReviewPreview() {
+    RenCarAppTheme(darkTheme = false, dynamicColor = false) {
+        LicenseScreen(
+            state = LicenseUiState(
+                isFrontUploaded = true,
+                isBackUploaded = true,
+                isSelfieUploaded = true,
+                activeStepIndex = 2,
+                isAwaitingApproval = true,
+            ),
+            onIntent = {},
+        )
     }
 }
 

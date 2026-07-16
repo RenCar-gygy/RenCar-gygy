@@ -13,6 +13,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hierarchy
 
 enum class RenCarBottomBarTab(
     val destination: String,
@@ -27,14 +29,15 @@ enum class RenCarBottomBarTab(
 
 @Composable
 fun RenCarBottomBar(
-    currentRoute: String?,
+    currentDestination: NavDestination?,
     onTabSelected: (RenCarBottomBarTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavigationBar(modifier = modifier) {
         RenCarBottomBarTab.entries.forEach { tab ->
+            val selected = currentDestination?.hierarchy?.any { it.route == tab.destination } == true
             NavigationBarItem(
-                selected = currentRoute == tab.destination,
+                selected = selected,
                 onClick = { onTabSelected(tab) },
                 icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
                 label = {

@@ -19,11 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 
@@ -33,11 +36,23 @@ fun WalletRoute(
     onShowSnackbar: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(WalletIntent.FetchInitialData)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
                 is WalletEffect.ShowToast -> onShowSnackbar(effect.message)
+                is WalletEffect.ShowError -> onShowSnackbar(effect.message)
             }
         }
     }
@@ -105,7 +120,11 @@ fun WalletScreen(
                 }
             } else {
                 items(state.savedCards) { card ->
-                    SavedCardItem(card = card)
+                    SavedCardItem(
+                        card = card,
+                        onSetDefault = { onIntent(WalletIntent.SetDefaultCardClicked(card.id)) },
+                        onDelete = { onIntent(WalletIntent.DeleteCardClicked(card.id)) },
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
@@ -168,7 +187,6 @@ fun EmptyStateMessage(message: String) {
 @Composable
 fun AddCardBottomSheet(onIntent: (WalletIntent) -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var holder by remember { mutableStateOf("") }
     var number by remember { mutableStateOf("") }
     var expiry by remember { mutableStateOf("") }
 
@@ -183,14 +201,14 @@ fun AddCardBottomSheet(onIntent: (WalletIntent) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(text = "Yeni Kart Ekle", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+            Text(
+                text = "Güvenlik için yalnızca kartın son 4 hanesi kaydedilir.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             OutlinedTextField(
-                value = holder, onValueChange = { holder = it },
-                label = { Text("Kart Üzerindeki İsim") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
-            OutlinedTextField(
-                value = number, onValueChange = { if (it.length <= 16) number = it },
+                value = number, onValueChange = { if (it.length <= 16) number = it.filter { c -> c.isDigit() } },
                 label = { Text("Kart Numarası") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -205,15 +223,15 @@ fun AddCardBottomSheet(onIntent: (WalletIntent) -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    if (holder.isNotBlank() && number.length >= 15 && expiry.length >= 4) {
-                        onIntent(WalletIntent.SubmitNewCard(holder, number, expiry))
+                    if (number.length >= 15 && expiry.length >= 4) {
+                        onIntent(WalletIntent.SubmitNewCard(number, expiry))
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Kartı Güvenle Kaydet", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Kartı Kaydet", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -228,12 +246,20 @@ fun DepositDialog(onIntent: (WalletIntent) -> Unit) {
         shape = RoundedCornerShape(24.dp),
         title = { Text("Bakiye Yükle", fontWeight = FontWeight.Bold) },
         text = {
-            OutlinedTextField(
-                value = amountText, onValueChange = { amountText = it },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                label = { Text("Yüklenecek Tutar (TL)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
+            Column {
+                OutlinedTextField(
+                    value = amountText, onValueChange = { amountText = it },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text("Yüklenecek Tutar (TL)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Minimum 10 TL, maksimum 5000 TL",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         },
         confirmButton = {
             Button(
@@ -291,9 +317,13 @@ fun BalanceCard(balance: String, onAddBalance: () -> Unit) {
 }
 
 @Composable
-fun SavedCardItem(card: CardUiModel) {
+fun SavedCardItem(
+    card: CardUiModel,
+    onSetDefault: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val isVisa = card.brand.uppercase().contains("VISA")
-    val brandColor = if (isVisa) Color(0xFF1A1F71) else Color(0xFFFF5F00) // Mastercard turuncusu veya Visa laciverti
+    val brandColor = if (isVisa) Color(0xFF1A1F71) else Color(0xFFFF5F00)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -301,21 +331,49 @@ fun SavedCardItem(card: CardUiModel) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(brandColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = card.brand, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold))
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(brandColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = card.brand, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold))
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "•••• •••• •••• ${card.last4}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Son kullanma: ${card.expiry}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (card.isDefault) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                        Text(
+                            text = "Varsayılan",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "**** **** **** ${card.last4}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Son kullanma: ${card.expiry}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!card.isDefault) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onSetDefault) {
+                        Text("Varsayılan yap")
+                    }
+                    TextButton(onClick = onDelete) {
+                        Text("Sil", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = onDelete) {
+                    Text("Sil", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

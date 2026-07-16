@@ -22,9 +22,9 @@
 | Ekran | Paket (planlanan) | API karşılığı | Not |
 |-------|-------------------|---------------|-----|
 | Ana Harita | `ui/map/` | `GET /vehicles` (konum alanları) | MapLibre + OSM |
-| Kiralama Geçmişi | `ui/rental/history/` | `GET /rentals` | Alt çubuk sekmesi |
-| Cüzdan / Ödeme Yöntemleri | `ui/payment/wallet/` | **Yok** | Stub |
-| Profil | `ui/profile/` | `GET /auth/me`, `POST /auth/logout` | Alt çubuk sekmesi |
+| Kiralama Geçmişi | `ui/rental/history/` | `GET /rentals`, `GET /rentals/stats` | `COMPLETED` kiralamalar; ödeme durumu rozeti; öğe tıklanınca özet |
+| Cüzdan / Ödeme Yöntemleri | `ui/payment/wallet/` | `GET /wallet`, `POST /wallet/topup`, `GET/POST /cards`, `DELETE /cards/{id}`, `PATCH /cards/{id}/default` | Bakiye, yükleme, kayıtlı kartlar |
+| Profil | `ui/profile/` | `GET /auth/me`, `POST /auth/logout`, `GET /rentals/stats` | Aylık istatistik; `ON_RESUME` ile yenileme |
 
 ---
 
@@ -32,12 +32,12 @@
 
 | Ekran | Paket (planlanan) | API karşılığı | Not |
 |-------|-------------------|---------------|-----|
-| Araç Detay | `ui/vehicle/detail/` | `GET /vehicles/{id}` | Haritadan veya listeden |
-| Rezervasyon Onayı | `ui/rental/confirmation/` | `POST /rentals` | Kiralama oluşturma (`PREPARING`) |
-| Başlangıç Fotoğrafları | `ui/rental/start_photos/` | `POST /rentals/{id}/photos` | 4 yön; kiralama öncesi zorunlu (Dk/Sa) |
-| Aktif Kiralama | `ui/rental/active/` | `GET /rentals/{id}`, `POST /rentals/{id}/finish` | Sayaç, kilit yönetimi ve bitirme |
-| Kiralama Özeti | `ui/rental/summary/` | `GET /rentals/{id}` | Kiralama sonu fatura ve detay özeti |
-| Araç Teslim Fotoğrafı | `ui/rental/delivery_photos/` | **Yok** | 4 yön; stub (API'da karşılığı yok) |
+| Araç Detay | `ui/vehicle/detail/` | `GET /vehicles/{id}`, `GET /quote`, `POST /reservations` | Plan sekmeleri; müsait olmayan araçta rezervasyon engeli |
+| Rezervasyon Onayı | `ui/rental/confirmation/` | `POST /rentals`, `DELETE /reservations` | Günlük planda `DatePicker` ile `endDate` |
+| Başlangıç Fotoğrafları | `ui/rental/start_photos/` | `POST /rentals/{id}/photos`, `POST /start` | FileProvider JPEG kamera; 4 yön (Dk/Sa) |
+| Aktif Kiralama | `ui/rental/active/` | `GET /rentals/active`, `POST /finish`, `DELETE` | Sayaç, yerel kilit simülasyonu, Socket.IO konum |
+| Kiralama Özeti | `ui/rental/summary/` | `GET /rentals/{id}`, `POST /rentals/{id}/pay` | Fatura özeti; cüzdan/kart ödeme; opsiyonel indirim kodu |
+| Araç Teslim Fotoğrafı | `ui/rental/delivery_photos/` | **Yok** | Ürün stub; yerel kamera önizleme; ana akış dışı |
 
 ---
 
@@ -48,7 +48,7 @@ Splash
   └─ auth/
        ├─ onboarding
        ├─ login ↔ register
-       ├─ otp (opsiyonel / stub)
+       ├─ otp
        └─ license
   └─ main/  [BottomBar: Harita | Geçmiş | Cüzdan | Profil]
        ├─ map
@@ -87,4 +87,4 @@ Checklist'teki ön atama korunmuştur; dengeleme önerileri için bkz. ekip mesa
 |------|----------|------------------|
 | **Furkan** | Splash, Onboarding, Login/Register, OTP, License, Ana Harita | `AuthRepository`, `LicenseRepository`, `VehicleRepository` (liste/konum) |
 | **Nazlı** | Araç Detay, Rezervasyon Onayı, Başlangıç Fotoğrafları, Aktif Kiralama | `VehicleRepository` (detay), `RentalRepository` |
-| **Çağla** | Özet, Cüzdan, Kiralama Geçmişi, Profil | `RentalRepository` (liste/detay), `AuthRepository` (me/logout); ödeme stub |
+| **Çağla** | Özet, Cüzdan, Kiralama Geçmişi, Profil | `WalletRepository`, `RentalRepository` (liste/detay/pay/stats), `AuthRepository` (me/logout) |

@@ -2,8 +2,11 @@ package com.turkcell.rencarapp.data.network.api
 
 import com.turkcell.rencarapp.data.network.dto.ActiveRentalResponseDto
 import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
+import com.turkcell.rencarapp.data.network.dto.PayRentalDto
+import com.turkcell.rencarapp.data.network.dto.PayRentalResponseDto
 import com.turkcell.rencarapp.data.network.dto.RentalPhotosState
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
+import com.turkcell.rencarapp.data.network.dto.RentalStatsResponseDto
 import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
 import okhttp3.MultipartBody
 import retrofit2.http.Body
@@ -51,12 +54,6 @@ interface RentalApi {
         @Path("id") id: String
     ): RentalResponseDto
 
-    @POST("rentals/{id}/return")
-    suspend fun returnRental(
-        @Header("Authorization") authorization: String,
-        @Path("id") id: String
-    ): RentalResponseDto
-
     @Multipart
     @POST("rentals/{id}/photos")
     suspend fun uploadPhoto(
@@ -77,6 +74,18 @@ interface RentalApi {
         @Header("Authorization") authorization: String,
         @Path("id") id: String
     )
+
+    @POST("rentals/{id}/pay")
+    suspend fun pay(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Body body: PayRentalDto,
+    ): PayRentalResponseDto
+
+    @GET("rentals/stats")
+    suspend fun getStats(
+        @Header("Authorization") authorization: String,
+    ): RentalStatsResponseDto
 
     @GET("vehicles/{id}")
     suspend fun getVehicleById(

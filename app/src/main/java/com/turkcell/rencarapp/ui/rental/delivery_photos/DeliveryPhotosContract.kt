@@ -37,7 +37,8 @@ enum class PhotoDirection(val label: String) {
 }
 
 sealed interface DeliveryPhotosIntent {
-    data class PhotoBoxToggled(val direction: PhotoDirection) : DeliveryPhotosIntent
+    data class PhotoCaptureRequested(val direction: PhotoDirection) : DeliveryPhotosIntent
+    data class PhotoCaptured(val direction: PhotoDirection, val previewUri: Uri) : DeliveryPhotosIntent
     data object CompletePhotosClicked : DeliveryPhotosIntent
     data object BackClicked : DeliveryPhotosIntent
 }
@@ -45,5 +46,6 @@ sealed interface DeliveryPhotosIntent {
 sealed interface DeliveryPhotosEffect {
     data object NavigateBack : DeliveryPhotosEffect
     data class NavigateToSummary(val rentalId: String) : DeliveryPhotosEffect
+    data class LaunchCamera(val direction: PhotoDirection) : DeliveryPhotosEffect
     data class ShowError(val message: String) : DeliveryPhotosEffect
 }

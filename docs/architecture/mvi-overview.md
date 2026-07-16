@@ -94,4 +94,4 @@ data/<feature>/
 - Gerçek API geldiğinde yalnızca implementasyon ve `di/<X>Module.kt` bağlama hedefi değişir;
   ViewModel ve Contract değişmez.
 
-API sözleşmesi: `https://rencar.halitkalayci.com/api/docs`.
+API sözleşmesi: `https://rencarv2.halitkalayci.com/api/docs`.

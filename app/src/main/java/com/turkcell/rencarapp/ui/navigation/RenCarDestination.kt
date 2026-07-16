@@ -30,7 +30,7 @@ object RenCarDestination {
     // --- Rental alt grafiği (nested) ---
     const val RentalGraph = "rental"
     const val VehicleDetail = "rental/vehicle/{vehicleId}?userLat={userLat}&userLng={userLng}"
-    const val RentalConfirmation = "rental/confirmation/{vehicleId}"
+    const val RentalConfirmation = "rental/confirmation/{vehicleId}?plan={plan}"
 
     // GÜNCELLENDİ: Artık kiralama bittikten sonra çağrıldığı için sadece rentalId alıyor
     const val RentalSummary = "rental/summary/{rentalId}"
@@ -55,7 +55,13 @@ object RenCarDestination {
         }
     }
 
-    fun rentalConfirmationRoute(vehicleId: String): String = "rental/confirmation/$vehicleId"
+    fun rentalConfirmationRoute(vehicleId: String, plan: String? = null): String {
+        return if (plan != null) {
+            "rental/confirmation/$vehicleId?plan=$plan"
+        } else {
+            "rental/confirmation/$vehicleId"
+        }
+    }
 
     // GÜNCELLENDİ: Eskiden vehicleId ve plan alıyordu, şimdi sadece faturanın ait olduğu rentalId'yi alıyor
     fun rentalSummaryRoute(rentalId: String): String = "rental/summary/$rentalId"

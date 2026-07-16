@@ -13,6 +13,8 @@ import com.turkcell.rencarapp.data.rental.RentalStatus
 import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleDistanceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
+import com.turkcell.rencarapp.data.vehicle.VehicleStatus
+import com.turkcell.rencarapp.data.rental.defaultQuoteMinutes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -59,7 +61,9 @@ class VehicleDetailViewModel @Inject constructor(
                 viewModelScope.launch { _effect.send(VehicleDetailEffect.NavigateBack) }
             }
             is VehicleDetailIntent.ReserveClicked -> reserveVehicle()
-            is VehicleDetailIntent.PlanChanged -> loadQuote(intent.plan, intent.minutes)
+            is VehicleDetailIntent.PlanChanged -> {
+                _uiState.update { it.copy(selectedPlan = intent.plan) }
+            }
             is VehicleDetailIntent.UnlockClicked -> {
                 // UI'dan kaldırıldı, artık işlevsiz.
             }
@@ -69,15 +73,28 @@ class VehicleDetailViewModel @Inject constructor(
     private fun reserveVehicle() {
         if (_uiState.value.isReserving) return
 
+        if (!_uiState.value.isReservable) {
+            viewModelScope.launch {
+                _effect.send(
+                    VehicleDetailEffect.ShowMessage(
+                        _uiState.value.unavailableMessage
+                            ?: "Bu araç şu anda kiralanamaz."
+                    )
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isReserving = true) }
 
+            val selectedPlan = _uiState.value.selectedPlan
             val preflightError = resolveReservationBlocker()
             if (preflightError != null) {
                 when (preflightError) {
                     is ReservationBlocker.ResumeConfirmation -> {
                         _uiState.update { it.copy(isReserving = false) }
-                        _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId))
+                        _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId, selectedPlan))
                     }
                     is ReservationBlocker.OpenRental -> {
                         _uiState.update { it.copy(isReserving = false) }
@@ -99,7 +116,7 @@ class VehicleDetailViewModel @Inject constructor(
             reservationRepository.create(vehicleId)
                 .onSuccess {
                     _uiState.update { it.copy(isReserving = false) }
-                    _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId))
+                    _effect.send(VehicleDetailEffect.NavigateToConfirmation(vehicleId, selectedPlan))
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isReserving = false) }
@@ -143,15 +160,6 @@ class VehicleDetailViewModel @Inject constructor(
         data class Message(val text: String) : ReservationBlocker
     }
 
-    private fun loadQuote(plan: RentalPlan, minutes: Int) {
-        viewModelScope.launch {
-            vehicleRepository.getQuote(vehicleId, plan, minutes)
-                .onSuccess { quote ->
-                    _uiState.update { it.copy(estimatedPrice = "₺${quote.estimatedTotal}") }
-                }
-        }
-    }
-
     @SuppressLint("MissingPermission")
     private fun loadVehicle() {
         viewModelScope.launch {
@@ -185,16 +193,23 @@ class VehicleDetailViewModel @Inject constructor(
                         vehicleLng = vehicle.longitude
                     )
 
-                    _uiState.update { 
+                    val isReservable = vehicle.status == VehicleStatus.AVAILABLE
+                    val unavailableMessage = when (vehicle.status) {
+                        VehicleStatus.RENTED -> "Bu araç şu anda kirada."
+                        VehicleStatus.RESERVED -> "Bu araç başka bir kullanıcı tarafından rezerve edildi."
+                        VehicleStatus.MAINTENANCE -> "Bu araç bakımda."
+                        else -> null
+                    }
+
+                    _uiState.update {
                         it.copy(
                             vehicle = vehicle,
                             distanceLabel = distanceLabel,
-                            isLoading = false
-                        ) 
+                            isLoading = false,
+                            isReservable = isReservable,
+                            unavailableMessage = unavailableMessage,
+                        )
                     }
-                    
-                    // Varsayılan quote yükle
-                    loadQuote(RentalPlan.PER_MINUTE, 30)
                 }
                 .onFailure { exception ->
                     _uiState.update { 

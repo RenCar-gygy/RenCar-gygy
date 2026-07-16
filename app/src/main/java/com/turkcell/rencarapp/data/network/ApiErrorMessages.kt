@@ -18,6 +18,8 @@ enum class ApiErrorContext {
     RENTAL_CANCEL,
     RENTAL_ACTIVE,
     RENTAL_PHOTO,
+    RENTAL_PAY,
+    WALLET,
     VEHICLE_DETAIL,
 }
 
@@ -42,6 +44,10 @@ fun ApiException.toUserMessage(context: ApiErrorContext): String =
                 "Kiralama başlatılamadı. Önce dört yön fotoğrafı gerekir; tekrar deneyin."
             ApiErrorContext.RENTAL_CANCEL ->
                 "Kiralama iptal edilemedi. Yalnızca henüz başlamamış (hazırlık) yolculuk iptal edilebilir; aktif yolculuk için «Kiralamayı Bitir» kullanın."
+            ApiErrorContext.RENTAL_PAY ->
+                "Ödeme alınamadı. Bakiye yetersiz olabilir veya yolculuk zaten ödenmiş olabilir."
+            ApiErrorContext.WALLET ->
+                "Cüzdan işlemi tamamlanamadı. Tutar aralığını veya kart bilgilerini kontrol edin."
             else -> message
         }
         403 -> "Bu işlem için yetkiniz yok."

@@ -5,7 +5,9 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.rental.RentalStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 @RequiresApi(Build.VERSION_CODES.O)
 class RentalHistoryViewModel @Inject constructor(
-    private val rentalRepository: RentalRepository
+    private val rentalRepository: RentalRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RentalHistoryUiState())
@@ -31,65 +33,84 @@ class RentalHistoryViewModel @Inject constructor(
     private val _effect = Channel<RentalHistoryEffect>(Channel.BUFFERED)
     val effect: Flow<RentalHistoryEffect> = _effect.receiveAsFlow()
 
-    private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy - HH:mm", Locale.forLanguageTag("tr-TR"))
+    private val dateFormatter = DateTimeFormatter
+        .ofPattern("dd MMM yyyy - HH:mm", Locale.forLanguageTag("tr-TR"))
         .withZone(ZoneId.systemDefault())
-
-    init {
-        onIntent(RentalHistoryIntent.LoadHistory)
-    }
 
     fun onIntent(intent: RentalHistoryIntent) {
         when (intent) {
             is RentalHistoryIntent.LoadHistory -> fetchRentals()
-            is RentalHistoryIntent.RentalClicked -> {
-                viewModelScope.launch {
-                    _effect.send(RentalHistoryEffect.ShowToast("Detay ekranı henüz aktif değil."))
-                }
-            }
+            is RentalHistoryIntent.RentalClicked -> navigateToSummary(intent.id)
+            is RentalHistoryIntent.PayRentalClicked -> navigateToSummary(intent.id)
+        }
+    }
+
+    private fun navigateToSummary(rentalId: String) {
+        viewModelScope.launch {
+            _effect.send(RentalHistoryEffect.NavigateToSummary(rentalId))
         }
     }
 
     private fun fetchRentals() {
-        val state = _uiState.value
-        if (state.isLoading) return
-
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            rentalRepository.listMine()
-                .onSuccess { rentals ->
-                    val uiModels = rentals.map { rental ->
-                        val vehicleName = listOf(rental.vehicleBrand, rental.vehicleModel)
-                            .filter { it.isNotBlank() }
-                            .joinToString(" ")
-                            .ifBlank { "Araç ${rental.vehicleId.take(4).uppercase()}" }
 
-                        RentalUiModel(
-                            id = rental.id,
-                            vehicleName = vehicleName,
-                            dateText = dateFormatter.format(rental.startDate),
-                            durationText = "${rental.durationMinutes} dk",
-                            distanceText = String.format(
-                                Locale.forLanguageTag("tr-TR"),
-                                "%.1f km",
-                                rental.distanceKm
-                            ),
-                            priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
-                        )
-                    }
+            val rentalsDef = async { rentalRepository.listMine() }
+            val statsDef = async { rentalRepository.getStats() }
 
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            rentals = uiModels,
-                            monthlyTripCount = uiModels.size,
-                            monthlyTotalSpent = rentals.sumOf { rental -> rental.totalPrice }
-                        )
-                    }
+            val rentalsResult = rentalsDef.await()
+            val statsResult = statsDef.await()
+
+            rentalsResult.onSuccess { rentals ->
+                val completedRentals = rentals
+                    .filter { it.status == RentalStatus.COMPLETED }
+                    .sortedByDescending { it.startDate }
+
+                val uiModels = completedRentals.map { rental ->
+                    val vehicleName = listOf(rental.vehicleBrand, rental.vehicleModel)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                        .ifBlank { "Araç ${rental.vehicleId.take(4).uppercase()}" }
+
+                    RentalUiModel(
+                        id = rental.id,
+                        vehicleName = vehicleName,
+                        dateText = dateFormatter.format(rental.startDate),
+                        durationText = "${rental.durationMinutes} dk",
+                        distanceText = String.format(
+                            Locale.forLanguageTag("tr-TR"),
+                            "%.1f km",
+                            rental.distanceKm,
+                        ),
+                        priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice),
+                        isPaid = rental.paymentStatus.equals("PAID", ignoreCase = true),
+                        paymentMethodLabel = paymentMethodLabel(rental.paymentMethod),
+                    )
                 }
-                .onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false) }
-                    _effect.send(RentalHistoryEffect.ShowError(error.message ?: "Kiralama geçmişi alınamadı."))
+
+                val stats = statsResult.getOrNull()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        rentals = uiModels,
+                        monthlyTripCount = stats?.tripCount ?: uiModels.size,
+                        monthlyTotalSpent = stats?.totalSpent
+                            ?: completedRentals
+                                .filter { rental -> rental.paymentStatus.equals("PAID", ignoreCase = true) }
+                                .sumOf { rental -> rental.totalPrice },
+                    )
                 }
+            }.onFailure { error ->
+                _uiState.update { it.copy(isLoading = false, rentals = emptyList()) }
+                _effect.send(RentalHistoryEffect.ShowError(error.message ?: "Kiralama geçmişi alınamadı."))
+            }
         }
     }
+
+    private fun paymentMethodLabel(paymentMethod: String?): String? =
+        when (paymentMethod?.uppercase()) {
+            "WALLET" -> "Cüzdan"
+            "CARD" -> "Kart"
+            else -> null
+        }
 }

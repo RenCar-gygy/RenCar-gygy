@@ -13,15 +13,19 @@ data class RentalUiModel(
     val dateText: String,
     val durationText: String,
     val distanceText: String,
-    val priceText: String
+    val priceText: String,
+    val isPaid: Boolean = false,
+    val paymentMethodLabel: String? = null,
 )
 
 sealed interface RentalHistoryIntent {
     data object LoadHistory : RentalHistoryIntent
     data class RentalClicked(val id: String) : RentalHistoryIntent
+    data class PayRentalClicked(val id: String) : RentalHistoryIntent
 }
 
 sealed interface RentalHistoryEffect {
+    data class NavigateToSummary(val rentalId: String) : RentalHistoryEffect
     data class ShowToast(val message: String) : RentalHistoryEffect
     data class ShowError(val message: String) : RentalHistoryEffect
 }

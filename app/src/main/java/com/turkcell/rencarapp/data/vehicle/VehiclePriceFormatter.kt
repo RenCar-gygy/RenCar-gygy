@@ -1,11 +1,13 @@
 package com.turkcell.rencarapp.data.vehicle
 
+import com.turkcell.rencarapp.data.rental.RentalPlan
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * v2 API doğrudan [Vehicle.pricePerMinute] ve [Vehicle.pricePerHour] döner.
- * Geriye dönük yardımcılar günlük fiyattan türetim için korunur.
+ * Tüm fiyat gösterimleri bu formatter üzerinden yapılmalı; günlük fiyattan türetim yalnızca
+ * geriye dönük yardımcılar için korunur.
  */
 object VehiclePriceFormatter {
 
@@ -16,13 +18,9 @@ object VehiclePriceFormatter {
 
     fun minutelyPrice(pricePerDay: Double): Double = hourlyPrice(pricePerDay) / MINUTES_PER_HOUR
 
+    /** Harita pini: API'deki saatlik birim fiyat (ana harita ve detay haritası aynı kaynak). */
     fun mapPinLabel(vehicle: Vehicle): String {
         val hourly = vehicle.pricePerHour.roundToInt().coerceAtLeast(1)
-        return "₺$hourly"
-    }
-
-    fun mapPinLabel(pricePerDay: Double): String {
-        val hourly = hourlyPrice(pricePerDay).roundToInt().coerceAtLeast(1)
         return "₺$hourly"
     }
 
@@ -31,6 +29,26 @@ object VehiclePriceFormatter {
 
     fun minutelyLabel(vehicle: Vehicle): String =
         "₺${formatAmount(vehicle.pricePerMinute)}/dk"
+
+    fun dailyLabel(vehicle: Vehicle): String =
+        "₺${formatAmount(vehicle.pricePerDay)}/gün"
+
+    fun planPriceAmount(vehicle: Vehicle, plan: RentalPlan): String = when (plan) {
+        RentalPlan.PER_MINUTE -> "₺${formatAmount(vehicle.pricePerMinute)}"
+        RentalPlan.HOURLY -> "₺${formatAmount(vehicle.pricePerHour)}"
+        RentalPlan.DAILY -> "₺${formatAmount(vehicle.pricePerDay)}"
+    }
+
+    fun planUnitSuffix(plan: RentalPlan): String = when (plan) {
+        RentalPlan.PER_MINUTE -> "/ dk"
+        RentalPlan.HOURLY -> "/ sa"
+        RentalPlan.DAILY -> "/ gün"
+    }
+
+    fun planPriceLabel(vehicle: Vehicle, plan: RentalPlan): String =
+        "${planPriceAmount(vehicle, plan)}${planUnitSuffix(plan)}"
+
+    fun formatMoney(amount: Double): String = "₺${formatAmount(amount)}"
 
     fun hourlyLabel(pricePerDay: Double): String =
         "₺${formatAmount(hourlyPrice(pricePerDay))}/sa"

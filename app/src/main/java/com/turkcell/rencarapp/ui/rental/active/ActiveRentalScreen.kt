@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.rental.active
 
+import androidx.activity.compose.BackHandler
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -47,10 +48,15 @@ fun ActiveRentalRoute(
     onNavigateToStartPhotos: (String, String, String) -> Unit,
     onNavigateToSummary: (String) -> Unit,
     onNavigateBackAfterCancel: () -> Unit,
+    onNavigateBackToMap: () -> Unit,
     viewModel: ActiveRentalViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    BackHandler(enabled = !uiState.isLoading) {
+        onNavigateBackToMap()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->

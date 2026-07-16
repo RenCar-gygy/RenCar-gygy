@@ -12,6 +12,7 @@ data class LicenseUiState(
     val isBackUploaded: Boolean = false,
     val isSelfieUploaded: Boolean = false,
     val isContinueEnabled: Boolean = false,
+    val isAwaitingApproval: Boolean = false,
     val isLoading: Boolean = false,
     val rejectReason: String? = null,
     val frontPreviewBytes: ByteArray? = null,
@@ -21,6 +22,7 @@ data class LicenseUiState(
 
 sealed interface LicenseIntent {
     data object BackClicked : LicenseIntent
+    data object CancelRequestClicked : LicenseIntent
     data object UploadFrontClicked : LicenseIntent
     data object UploadBackClicked : LicenseIntent
     data object UploadSelfieClicked : LicenseIntent

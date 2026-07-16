@@ -44,9 +44,10 @@ Kök NavHost (RenCarNavHost)
     └── rental/  (nested graph 3)     → Kiralama hattı
         ├── vehicle_detail/{id}       → Nazlı
         ├── confirmation/{id}         → Nazlı
-        ├── summary/{id}              → Çağla
-        ├── delivery_photos/{id}      → Nazlı
-        └── active/{rentalId}         → Nazlı
+        ├── start_photos/{id}         → Nazlı
+        ├── active/{rentalId}         → Nazlı
+        ├── summary/{rentalId}        → Çağla
+        └── delivery_photos/{id}      → Nazlı (ürün stub, ana akış dışı)
 ```
 
 **Özet:** NavHost, ekip bölüşümüne göre üç ana grafiğe ayrılmıştır — Auth (Furkan), Main sekmeler (Furkan + Çağla), Rental akışı (Nazlı + Çağla summary).
@@ -61,22 +62,23 @@ Kök NavHost (RenCarNavHost)
 | `auth/` | `auth/*` | **Furkan** | Onboarding, Login, Register, OTP, License |
 | `main/` | `main/map` | **Furkan** | Ana Harita |
 | `main/` | `main/history`, `main/wallet`, `main/profile` | **Çağla** | Kiralama Geçmişi, Cüzdan, Profil |
-| `rental/` | `rental/vehicle`, `confirmation`, `delivery_photos`, `active` | **Nazlı** | Araç Detay, Rezervasyon Onayı, Teslim Fotoğrafı, Aktif Kiralama |
+| `rental/` | `rental/vehicle`, `confirmation`, `start_photos`, `active` | **Nazlı** | Araç Detay, Rezervasyon Onayı, Başlangıç Fotoğrafları, Aktif Kiralama |
+| `rental/` | `rental/delivery_photos` | **Nazlı** | Teslim Fotoğrafı (ürün stub; API yok, ana akış dışı) |
 | `rental/` | `rental/summary` | **Çağla** | Ödeme / Kiralama Özeti |
 
 ### 3.1 Önemli not: Summary ekranı
 
-`summary` ekranı **Çağla'ya** atanmıştır (`ui/rental/summary/`) ancak navigasyon grafiğinde **rental alt grafiğinde** yer alır. Bunun nedeni kullanıcı akışıdır: Onay → Özet → Teslim fotoğrafı → Aktif kiralama. Sahiplik **paket** bazında; navigasyon **akış** bazındadır.
+`summary` ekranı **Çağla'ya** atanmıştır (`ui/rental/summary/`) ancak navigasyon grafiğinde **rental alt grafiğinde** yer alır. v2 akışı: Onay → Aktif → (dk/sa: start_photos) → Bitir → Özet. `delivery_photos` tasarımda kalır; API karşılığı olmadığı için ana akışa dahil değildir.
 
 ### 3.2 Repository eşlemesi (Sprint 1 veri kaynağı)
 
 | Kişi | Repository / API |
 |------|------------------|
 | **Furkan** | `AuthRepository`, `LicenseRepository`, `VehicleRepository` (liste/konum) |
-| **Nazlı** | `VehicleRepository` (detay), `RentalRepository` |
-| **Çağla** | `RentalRepository` (liste), `AuthRepository` (me/logout); ödeme stub |
+| **Nazlı** | `VehicleRepository` (detay), `RentalRepository`, `ReservationRepository` |
+| **Çağla** | `WalletRepository`, `RentalRepository` (liste/detay/pay/stats), `AuthRepository` (me/logout) |
 
-Sprint 0–1 aşamasında tüm repository'ler **Fake*Repository** stub implementasyonları kullanır.
+Üretimde `Default*Repository` implementasyonları kullanılır (`Fake*Repository` yalnızca test/yerel geliştirme için kalır).
 
 ---
 
@@ -151,9 +153,10 @@ Tüm route string'leri `RenCarDestination.kt` içinde tanımlıdır. Sprint 1'de
 | Sabit | Route | Parametre |
 |-------|-------|-----------|
 | `VehicleDetail` | `rental/vehicle/{vehicleId}` | `vehicleId` |
-| `RentalConfirmation` | `rental/confirmation/{vehicleId}` | `vehicleId` |
-| `RentalSummary` | `rental/summary/{vehicleId}` | `vehicleId` |
-| `DeliveryPhotos` | `rental/delivery_photos/{vehicleId}` | `vehicleId` |
+| `RentalConfirmation` | `rental/confirmation/{vehicleId}?plan={plan}` | `vehicleId`, opsiyonel `plan` |
+| `RentalSummary` | `rental/summary/{rentalId}` | `rentalId` |
+| `StartPhotos` | `rental/start_photos/{rentalId}` | `rentalId` |
+| `DeliveryPhotos` | `rental/delivery_photos/{rentalId}` | `rentalId` |
 | `ActiveRental` | `rental/active/{rentalId}` | `rentalId` |
 
 ### 6.4 Route helper fonksiyonları
@@ -278,7 +281,7 @@ C: Kiralama hattı full-screen akış; alt çubuk kullanıcı deneyimini bozar.
 
 - GitHub org: https://github.com/RenCar-gygy
 - Repository: https://github.com/RenCar-gygy/RenCar-gygy
-- API dokümantasyonu: https://rencar.halitkalayci.com/api/docs
+- API dokümantasyonu: https://rencarv2.halitkalayci.com/api/docs
 - MapLibre: https://maplibre.org/
 
 ---

@@ -208,3 +208,78 @@ data class Reservation(
     val remainingSeconds: Int,
     val createdAt: String,
 )
+
+@Serializable
+data class WalletTransactionDto(
+    val id: String,
+    val type: String,
+    val amount: Double,
+    val rentalId: String? = null,
+    val description: String,
+    val createdAt: String,
+)
+
+@Serializable
+data class WalletResponseDto(
+    val id: String,
+    val balance: Double,
+    val transactions: List<WalletTransactionDto>,
+)
+
+@Serializable
+data class TopupDto(
+    val amount: Double,
+)
+
+@Serializable
+data class CardResponseDto(
+    val id: String,
+    val brand: String,
+    val last4: String,
+    val expMonth: Int,
+    val expYear: Int,
+    val isDefault: Boolean,
+    val createdAt: String,
+)
+
+@Serializable
+data class CreateCardDto(
+    val brand: String,
+    val last4: String,
+    val expMonth: Int,
+    val expYear: Int,
+)
+
+@Serializable
+data class PayRentalDto(
+    val method: String,
+    val cardId: String? = null,
+    val discountCode: String? = null,
+)
+
+@Serializable
+data class PaidCardSummaryDto(
+    val brand: String,
+    val last4: String,
+)
+
+@Serializable
+data class PayRentalResponseDto(
+    val rentalId: String,
+    val paymentStatus: String,
+    val method: String,
+    val totalPrice: Double,
+    val discountAmount: Double,
+    val paidAmount: Double,
+    val walletBalance: Double? = null,
+    val card: PaidCardSummaryDto? = null,
+)
+
+@Serializable
+data class RentalStatsResponseDto(
+    val month: String,
+    val tripCount: Int,
+    val totalSpent: Double,
+    val totalMinutes: Int,
+    val totalKm: Double,
+)

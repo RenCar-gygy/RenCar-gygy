@@ -11,8 +11,10 @@ data class VehicleDetailUiState(
     val isLoading: Boolean = false,
     val isReserving: Boolean = false,
     val error: String? = null,
-    val distanceLabel: String = "", // Dinamik mesafe bilgisi
-    val estimatedPrice: String? = null, // API'den gelen tahmini fiyat
+    val distanceLabel: String = "",
+    val selectedPlan: RentalPlan = RentalPlan.PER_MINUTE,
+    val isReservable: Boolean = true,
+    val unavailableMessage: String? = null,
 )
 
 /**
@@ -31,7 +33,7 @@ sealed interface VehicleDetailIntent {
  */
 sealed interface VehicleDetailEffect {
     data object NavigateBack : VehicleDetailEffect
-    data class NavigateToConfirmation(val vehicleId: String) : VehicleDetailEffect
+    data class NavigateToConfirmation(val vehicleId: String, val plan: RentalPlan) : VehicleDetailEffect
     data class NavigateToActiveRental(val rentalId: String) : VehicleDetailEffect
     data class ShowMessage(val message: String) : VehicleDetailEffect
 }

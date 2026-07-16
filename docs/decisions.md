@@ -175,7 +175,7 @@
 - Karar: `LicenseViewModel` ve `MapViewModel` fake repository'ler ile bağlanır.
 - Son Güncelleme Tarihi: 03.07.2026
 - License: stub fotoğraflarla `upload`; fake repo anında `APPROVED` döner; Devam Et kullanıcıyı `CUSTOMER` yapar
-- Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi API `pricePerDay` alanından `VehiclePriceFormatter` ile türetilir (saatlik = `÷24`, günlük plan doğrudan API değeri; `totalPrice = gün × pricePerDay`)
+- Harita: `VehicleRepository.listAvailable()` ile pin listesi; fiyat etiketi `VehiclePriceFormatter` ile API alanlarından (`pricePerHour` pin, plan kartları `pricePerMinute` / `pricePerHour` / `pricePerDay`)
 - Sprint 3'te gerçek fotoğraf seçimi ve MapLibre koordinat eşlemesi eklenecektir
 
 ---
@@ -317,8 +317,10 @@
 - **Günlük:** `POST /rentals` + `endDate` → doğrudan `ACTIVE`; başlangıç fotoğrafı ve `start` çağrısı yok; kilidi aç yalnızca yerel kilit durumunu günceller
 - **Bitir:** `POST /rentals/{id}/finish` → doğrudan özet ekranı; API bitiş fotoğrafı zorunlu tutmaz
 - **Onay ekranı:** `create` sonrası `start` çağrılmaz; dk/sa için aktif ekran `PREPARING` modunda açılır
-- **Başlangıç fotoğrafları:** `ui/rental/start_photos/` — kutucuk işaretleme + API upload (gerçek kamera Nazlı'ya bırakıldı)
-- **Teslim fotoğrafları:** `ui/rental/delivery_photos/` grafikte kalır; ana akıştan çıkarıldı (ürün stub, API karşılığı yok)
+- **Başlangıç fotoğrafları:** `ui/rental/start_photos/` — FileProvider + `TakePicture` ile tam çözünürlüklü JPEG; `POST /rentals/{id}/photos` + `POST /start`
+- **Teslim fotoğrafları:** `ui/rental/delivery_photos/` — ürün stub (API yok); gerçek kamera ile yerel önizleme; ana akıştan çıkarıldı (`finish` → özet)
+- **Günlük plan:** Rezervasyon onayında `DatePicker` ile `endDate` seçimi; quote süresi seçilen tarihe göre hesaplanır
+- **Araç detay:** Plan sekmeleri + `GET /quote`; `RENTED`/`RESERVED` için rezervasyon butonu devre dışı; seçilen plan onay ekranına query ile aktarılır
 - **Rezervasyon iptali:** Onay ekranından geri dönülünce `DELETE /reservations/{id}`
 - **Hata mesajları:** `ApiException` + `ApiErrorContext` ile 409/403/404 bağlama özel mesajlar
 
@@ -334,3 +336,87 @@
 - `RentalSummaryViewModel` / `RentalHistoryViewModel` sabit mesafe ve tahmini servis ücreti yerine domain alanlarını kullanır
 - Kullanılmayan `RentalRepository.returnRental()` kaldırıldı; akış `finish` üzerinden devam eder
 - Aktif kiralama haritası: `followLocationWithPan` ile ilk zoom sonrası yumuşak pan; konum beklenirken placeholder; rezervasyon modunda `mm:ss` geri sayım
+
+---
+
+### API v2 — Cüzdan, ödeme ve profil (feature/cagla-wallet-screen)
+
+- Karar: Çağla ekranları OpenAPI v2 ile hizalandı; `WalletRepository` + `DefaultWalletRepository` proje standardına taşındı.
+- Son Güncelleme Tarihi: 16.07.2026
+- **Cüzdan:** `GET /wallet`, `POST /wallet/topup` — `AuthorizedRequestExecutor` ile Bearer token; işlem geçmişi API `transactions` dizisinden
+- **Kartlar:** `GET/POST /cards`, `DELETE /cards/{id}`, `PATCH /cards/{id}/default` — DTO: `last4`, `expMonth`, `expYear`; fake fallback kaldırıldı
+- **Ödeme:** `POST /rentals/{id}/pay` — özet ekranında cüzdan veya kayıtlı kart seçimi; `PAID` durumunda ödeme butonu gizlenir
+- **İstatistik:** `GET /rentals/stats` — geçmiş ve profil ekranlarında aylık özet
+- **Geçmiş:** Liste öğesine tıklanınca `rental/summary/{rentalId}` ekranına yönlendirme
+- **Profil:** `GET /auth/me` + aylık istatistik kartı; profil düzenleme API karşılığı olmadığı için stub mesaj korunur
+- **Profil yenileme:** `ON_RESUME` lifecycle ile `LoadProfile` tetiklenir (cüzdan/geçmiş ile aynı desen)
+- **İndirim kodu:** Özet ekranında ödenmemiş kiralamalarda opsiyonel `OutlinedTextField`; `POST /rentals/{id}/pay` body `discountCode` alanına aktarılır; başarılı ödemede API `discountAmount` fatura satırında gösterilir
+- **Geçmiş ödeme etiketi:** `RentalHistoryCard` üzerinde `paymentStatus` → "Ödendi" / "Ödenmedi" rozeti
+- **Rental ödeme alanları:** `Rental.discountAmount` + `paymentMethod` domain'e eklendi; özet ve geçmiş ekranlarında ödenmiş kiralamalarda gösterilir
+- **Profil davet kodu:** `GET /auth/me` → `referralCode` profil kartında + panoya kopyalama
+- **Profil istatistik:** `GET /rentals/stats` → `totalMinutes` aylık özet kartında
+- **Harita araç listesi:** `GET /vehicles?type=` tek tip seçiliyken sunucu tarafı filtre; `page` ile tüm sayfalar birleştirilir (limit 100, max 20 sayfa)
+
+---
+
+### Ehliyet onay — Talebi İptal Et (UNDER_REVIEW)
+
+- Karar: OpenAPI v2'de ehliyet talebi iptal ucu yok (`GET /license/status`, `POST /license/upload` dışında müşteri ucu yok).
+- Son Güncelleme Tarihi: 16.07.2026
+- **UI:** `UNDER_REVIEW` durumunda «Onay Bekleniyor» butonu (pasif) + «Talebi İptal Et» metin butonu gösterilir.
+- **Davranış:** «Talebi İptal Et» → `POST /auth/logout` + giriş ekranına dönüş (sunucu tarafında talep silinmez; kullanıcı oturumu sonlandırır).
+- **Gelecek:** Backend `DELETE /license` veya benzeri uç eklendiğinde repository + ViewModel güncellenmeli.
+
+---
+
+### Fiyat gösterimi standardizasyonu (harita pini + araç detay)
+
+- Karar: Tüm kullanıcıya dönük birim fiyatlar API alanlarından (`pricePerMinute`, `pricePerHour`, `pricePerDay`) ve tek formatter'dan (`VehiclePriceFormatter`) üretilir.
+- Son Güncelleme Tarihi: 16.07.2026
+- **Harita pini:** `Vehicle.pricePerHour` → tam sayı `₺{saatlik}` (ana harita ve detay sabit haritası aynı overload)
+- **Detay plan kartları + Kiralama Ücreti paneli:** Seçili planın birim fiyatı; quote `estimatedTotal` detay ekranında gösterilmez (onay ekranında kalır)
+- **Kaldırılan:** `mapPinLabel(pricePerDay)` türetimi — `pricePerHour ≠ pricePerDay/24` olduğunda pin tutarsızlığına yol açıyordu
+
+---
+
+### UX düzeltmeleri — snackbar, geri yığını, harita CTA, fatura (16.07.2026)
+
+- **Snackbar:** `RenCarNavHost` `SnackbarHostState` ile Cüzdan, Profil, Geçmiş ve Özet ekranlarındaki mesajları gösterir (`onShowSnackbar = { _ -> }` kaldırıldı).
+- **Aktif kiralama geri yığını:** Onay/detay → aktif geçişinde `popUpTo(Map)`; `ActiveRentalRoute` `BackHandler` ile haritaya döner (onay ekranına geri dönüp tekrar `POST /rentals` engellenir).
+- **Harita CTA:** `MapViewModel` `getActive` / `listMine(PREPARING)` / `getActive` rezervasyon kontrolü; alt panelde «Devam» / «Onayla» banner'ı; `ON_RESUME` ile yenileme.
+- **Özet fatura:** `usageFee = totalPrice - serviceFee - startFee`; `startFee > 0` ise «Açılış Ücreti» satırı ayrı gösterilir.
+
+---
+
+### Cüzdan ödemesi — bakiye düşümü (16.07.2026)
+
+- **Sorun:** Varsayılan ödeme yöntemi state'te `CARD` idi; cüzdan seçili görünse bile kart ödemesi simüle edilebiliyordu. Cüzdan sekmesi ödeme sonrası eski bakiyeyi gösterebiliyordu.
+- **Düzeltme:** Varsayılan `WALLET`; `POST /rentals/{id}/pay` body'de `cardId` yalnızca `CARD` iken gönderilir; cüzdan öncesi bakiye yeterlilik kontrolü; başarılı cüzdan ödemesinde `WalletRefreshNotifier` ile cüzdan ekranı yenilenir.
+- **API:** `method: WALLET` → tutar cüzdandan düşülür (`walletBalance` yanıtta döner); yetersiz bakiye → 409.
+
+---
+
+### Eksik kapanış — status mapping, onay fiyatları, geçmiş ödeme, API temizliği (16.07.2026)
+
+- **Araç status fallback:** Bilinmeyen API status → `MAINTENANCE` (rezervasyon kapalı; yanlışlıkla kiralanabilir `AVAILABLE` riski kaldırıldı).
+- **Kiralama status fallback:** Bilinmeyen API status → `COMPLETED` (aktif kiralama yanlış pozitifi engellenir).
+- **Araç detay:** `MAINTENANCE` için «Bu araç bakımda.» mesajı.
+- **Onay ekranı fiyatları:** `VehiclePriceFormatter.planPriceLabel()` ve `formatMoney()`; contract varsayılanları boş string.
+- **Geçmiş ödeme CTA:** Ödenmemiş satırlarda «Öde» butonu → `rental/summary/{rentalId}`.
+- **API temizliği:** Kullanılmayan `RentalApi.returnRental` kaldırıldı (akış `finish` üzerinden).
+- **Dokümantasyon:** v2 API URL güncellemesi; OTP artık gerçek API; Sprint 2 fiyat notu güncellendi.
+- **Dokunulmadı (bilinçli):** Teslim fotoğrafı stub; profil menü stub'ları (Ayarlar, Yardım, Davet et, profil düzenleme).
+
+---
+
+### Günlük plan quote — 2 günlük fiyat şişmesi (16.07.2026)
+
+- **Sorun:** Quote süresi `Instant.now()` → seçilen iade günü 23:59 arasındaki ham dakika farkıyla hesaplanıyordu. API kuralı: DAILY planda «başlanmış gün tam sayılır»; bugün + yarın iade = 2 takvim günü = 2× günlük ücret.
+- **Düzeltme:** `dailyQuoteMinutes()` takvim günü sayısı × 1440 kullanır (`RentalPlanMapping.kt`). Varsayılan iade tarihi `LocalDate.now()` (1 gün). Süre etiketi: `1 gün · 16 Tem 2026` formatı.
+
+---
+
+### Harita gri pin — detay 404 önleme (16.07.2026)
+
+- **Sorun:** `includeBusy=true` ile gösterilen gri pinlere tıklanınca `GET /vehicles/{id}` 404 dönüyordu (API: müsait olmayan araç yalnızca aktif kiracıya görünür); kullanıcıya «İstenen kayıt bulunamadı» çıkıyordu.
+- **Davranış:** Gri pin (`isInUse`) tıklanınca detaya gitme; «Bu araç şu anda müsait değil.» snackbar. Kendi aktif kiralama/rezervasyonundaki araç (`activeSession.vehicleId`) istisna — detay açılır.

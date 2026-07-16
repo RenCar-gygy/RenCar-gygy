@@ -2,6 +2,9 @@ package com.turkcell.rencarapp.ui.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.rental.RentalStatus
+import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.Vehicle
 import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
@@ -27,6 +30,8 @@ import kotlin.math.sqrt
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val rentalRepository: RentalRepository,
+    private val reservationRepository: ReservationRepository,
     private val areaLabelResolver: MapAreaLabelResolver,
 ) : ViewModel() {
 
@@ -41,6 +46,7 @@ class MapViewModel @Inject constructor(
 
     init {
         loadVehicles()
+        refreshActiveSession()
     }
 
     fun onIntent(intent: MapIntent) {
@@ -102,17 +108,29 @@ class MapViewModel @Inject constructor(
                 }
             }
             MapIntent.FindNearestClicked -> findNearest()
-            is MapIntent.VehiclePinClicked -> {
-                val state = _uiState.value
-                sendEffect(
-                    MapEffect.NavigateToVehicleDetail(
-                        vehicleId = intent.vehicleId,
-                        userLat = state.userLatitude,
-                        userLng = state.userLongitude
-                    )
-                )
-            }
+            MapIntent.RefreshActiveSession -> refreshActiveSession()
+            MapIntent.ActiveSessionClicked -> openActiveSession()
+            is MapIntent.VehiclePinClicked -> handleVehiclePinClicked(intent.vehicleId)
         }
+    }
+
+    private fun handleVehiclePinClicked(vehicleId: String) {
+        val state = _uiState.value
+        val pin = state.visiblePins.find { it.id == vehicleId }
+            ?: state.vehiclePins.find { it.id == vehicleId }
+
+        if (pin?.isInUse == true && state.activeSession?.vehicleId != vehicleId) {
+            sendEffect(MapEffect.ShowError("Bu araç şu anda müsait değil."))
+            return
+        }
+
+        sendEffect(
+            MapEffect.NavigateToVehicleDetail(
+                vehicleId = vehicleId,
+                userLat = state.userLatitude,
+                userLng = state.userLongitude,
+            ),
+        )
     }
 
     private fun submitLocationSearch() {
@@ -157,12 +175,17 @@ class MapViewModel @Inject constructor(
         loadVehiclesJob?.cancel()
         loadVehiclesJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, selectedCategory = category) }
-            val result = fetchVehiclesFromApi(category)
+            val apiType = resolveApiVehicleType(_uiState.value.selectedVehicleTypes)
+            val result = fetchVehiclesFromApi(category, apiType)
             _uiState.update { it.copy(isLoading = false) }
 
             result
                 .onSuccess { vehicles ->
-                    val pins = vehicles.map { vehicle -> vehicle.toMapPin() }
+                    val filteredVehicles = applyVehicleTypeFilter(
+                        vehicles = vehicles,
+                        selectedTypes = _uiState.value.selectedVehicleTypes,
+                    )
+                    val pins = filteredVehicles.map { vehicle -> vehicle.toMapPin() }
                     _uiState.update { state ->
                         val updated = state.copy(vehiclePins = pins)
                         val visiblePins = computeVisiblePins(updated)
@@ -181,21 +204,39 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchVehiclesFromApi(category: VehicleCategory): Result<List<Vehicle>> =
+    private suspend fun fetchVehiclesFromApi(
+        category: VehicleCategory,
+        type: VehicleType? = null,
+    ): Result<List<Vehicle>> =
         when (category) {
-            VehicleCategory.ALL -> vehicleRepository.listAvailable(includeBusy = true)
+            VehicleCategory.ALL -> vehicleRepository.listAvailable(type = type, includeBusy = true)
             VehicleCategory.ECONOMIC -> vehicleRepository.listAvailable(
+                type = type,
                 segment = VehicleSegment.ECONOMY,
                 includeBusy = true,
             )
             VehicleCategory.SUV -> vehicleRepository.listAvailable(
+                type = type,
                 segment = VehicleSegment.SUV,
                 includeBusy = true,
             )
             VehicleCategory.COMFORT -> vehicleRepository.listAvailable(
+                type = type,
                 segment = VehicleSegment.COMFORT,
                 includeBusy = true,
             )
+        }
+
+    private fun resolveApiVehicleType(types: Set<VehicleType>): VehicleType? = types.singleOrNull()
+
+    private fun applyVehicleTypeFilter(
+        vehicles: List<Vehicle>,
+        selectedTypes: Set<VehicleType>,
+    ): List<Vehicle> =
+        if (selectedTypes.isEmpty()) {
+            vehicles
+        } else {
+            vehicles.filter { it.type in selectedTypes }
         }
 
     private fun selectCategory(category: VehicleCategory) {
@@ -212,7 +253,7 @@ class MapViewModel @Inject constructor(
             }
             state.copy(selectedVehicleTypes = updatedTypes)
         }
-        applyFilters(triggerFocus = true)
+        loadVehicles(_uiState.value.selectedCategory)
     }
 
     private fun applyFilters(triggerFocus: Boolean, focusSearchArea: Boolean = false) {
@@ -375,6 +416,85 @@ class MapViewModel @Inject constructor(
                     userLng = userLng
                 )
             )
+        }
+    }
+
+    private fun openActiveSession() {
+        val session = _uiState.value.activeSession ?: return
+        when (session.type) {
+            MapActiveSessionType.RENTAL -> {
+                val rentalId = session.rentalId ?: return
+                sendEffect(MapEffect.NavigateToActiveRental(rentalId))
+            }
+            MapActiveSessionType.RESERVATION -> {
+                val vehicleId = session.vehicleId ?: return
+                sendEffect(MapEffect.NavigateToConfirmation(vehicleId))
+            }
+        }
+    }
+
+    private fun refreshActiveSession() {
+        viewModelScope.launch {
+            rentalRepository.getActive()
+                .onSuccess { active ->
+                    val vehicleName = "${active.vehicle.brand} ${active.vehicle.model}".trim()
+                    val subtitle = when (active.status.uppercase()) {
+                        "PREPARING" -> "Hazırlık — kilidi açıp yola çıkın"
+                        else -> "Sürüş devam ediyor"
+                    }
+                    _uiState.update {
+                        it.copy(
+                            activeSession = MapActiveSession(
+                                type = MapActiveSessionType.RENTAL,
+                                rentalId = active.id,
+                                vehicleId = active.vehicleId,
+                                title = vehicleName.ifBlank { "Aktif kiralama" },
+                                subtitle = subtitle,
+                            ),
+                        )
+                    }
+                    return@launch
+                }
+
+            val preparingRental = rentalRepository.listMine()
+                .getOrNull()
+                ?.firstOrNull { it.status == RentalStatus.PREPARING }
+
+            if (preparingRental != null) {
+                val vehicleName = listOf(preparingRental.vehicleBrand, preparingRental.vehicleModel)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
+                _uiState.update {
+                    it.copy(
+                        activeSession = MapActiveSession(
+                            type = MapActiveSessionType.RENTAL,
+                            rentalId = preparingRental.id,
+                            vehicleId = preparingRental.vehicleId,
+                            title = vehicleName.ifBlank { "Hazırlık aşaması" },
+                            subtitle = "Araca gidip kilidi açın",
+                        ),
+                    )
+                }
+                return@launch
+            }
+
+            reservationRepository.getActive()
+                .onSuccess { reservation ->
+                    val vehicleName = "${reservation.vehicle.brand} ${reservation.vehicle.model}".trim()
+                    _uiState.update {
+                        it.copy(
+                            activeSession = MapActiveSession(
+                                type = MapActiveSessionType.RESERVATION,
+                                vehicleId = reservation.vehicleId,
+                                title = vehicleName.ifBlank { "Aktif rezervasyon" },
+                                subtitle = "Onay ekranından kiralamayı başlatın",
+                            ),
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(activeSession = null) }
+                }
         }
     }
 

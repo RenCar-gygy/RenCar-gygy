@@ -26,12 +26,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.rencarapp.data.rental.RentalPlan
+import com.turkcell.rencarapp.data.rental.requiresScheduledEndDate
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private val RenCarBlue = Color(0xFF2563EB)
 private val RenCarBlueGlow = Color(0x662563EB)
@@ -259,6 +266,44 @@ fun RentalConfirmationScreen(
                     )
                 }
 
+                if (state.selectedPlan.requiresScheduledEndDate()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onIntent(RentalConfirmationIntent.DailyEndDatePickerClicked) },
+                        color = surfaceColor,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, if (isDark) Color(0xFF1F2937) else Color(0xFFF1F5F9)),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Planlanan iade tarihi",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                                )
+                                Text(
+                                    text = state.dailyEndDate?.format(
+                                        DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("tr-TR"))
+                                    ) ?: "Tarih seçin",
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color.White else Color(0xFF0F172A),
+                                )
+                            }
+                            Text(
+                                text = "Değiştir",
+                                color = RenCarBlue,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // Fiyat Özeti
@@ -279,10 +324,11 @@ fun RentalConfirmationScreen(
                         )
                         
                         PriceDetailItem(
-                            label = "Tahmini Toplam (${state.estimatedDuration})", 
-                            value = state.estimatedPriceLabel, 
+                            label = "Tahmini Toplam",
+                            subtitle = state.estimatedDuration,
+                            value = state.estimatedPriceLabel,
                             isTotal = true,
-                            isDark = isDark
+                            isDark = isDark,
                         )
                     }
                 }
@@ -349,6 +395,43 @@ fun RentalConfirmationScreen(
             }
         }
     }
+
+    if (state.showDailyEndDatePicker) {
+        val minDate = RentalConfirmationViewModel.defaultDailyEndDate()
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = state.dailyEndDate
+                ?.atStartOfDay(ZoneId.systemDefault())
+                ?.toInstant()
+                ?.toEpochMilli()
+                ?: minDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { onIntent(RentalConfirmationIntent.DailyEndDatePickerDismissed) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val millis = datePickerState.selectedDateMillis ?: return@TextButton
+                        val selectedDate = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                        if (!selectedDate.isBefore(minDate)) {
+                            onIntent(RentalConfirmationIntent.DailyEndDateSelected(selectedDate))
+                        }
+                    }
+                ) {
+                    Text("Tamam")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onIntent(RentalConfirmationIntent.DailyEndDatePickerDismissed) }) {
+                    Text("İptal")
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
 
 @Composable
@@ -395,24 +478,120 @@ fun PlanItem(
 }
 
 @Composable
-fun PriceDetailItem(label: String, value: String, isTotal: Boolean = false, isDark: Boolean) {
+fun PriceDetailItem(
+    label: String,
+    value: String,
+    isTotal: Boolean = false,
+    isDark: Boolean,
+    subtitle: String? = null,
+) {
+    val labelColor = if (isTotal) {
+        if (isDark) Color.White else Color(0xFF0F172A)
+    } else {
+        if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    }
+    val valueColor = if (isTotal) {
+        RenCarBlue
+    } else {
+        if (isDark) Color.White else Color(0xFF0F172A)
+    }
+    val valueStyle = if (isTotal) {
+        MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+    } else {
+        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+    }
+
+    if (isTotal) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 16.dp),
+            ) {
+                Text(
+                    text = label,
+                    color = labelColor,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            MoneyText(
+                amount = value,
+                style = valueStyle,
+                color = valueColor,
+            )
+        }
+        return
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            color = if (isTotal) (if (isDark) Color.White else Color(0xFF0F172A)) else (if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)),
-            style = if (isTotal) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyMedium
+            color = labelColor,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f).padding(end = 16.dp),
         )
+        MoneyText(
+            amount = value,
+            style = valueStyle,
+            color = valueColor,
+        )
+    }
+}
+
+@Composable
+private fun MoneyText(
+    amount: String,
+    style: TextStyle,
+    color: Color,
+) {
+    val symbol = if (amount.startsWith("₺")) "₺" else ""
+    val numeric = if (symbol.isNotEmpty()) amount.removePrefix("₺") else amount
+    val numericStyle = style.copy(
+        fontFeatureSettings = "tnum",
+        letterSpacing = 0.sp,
+    )
+    val symbolStyle = style.copy(
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.sp,
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
+    ) {
+        if (symbol.isNotEmpty()) {
+            Text(
+                text = symbol,
+                style = symbolStyle,
+                color = color,
+            )
+        }
         Text(
-            text = value,
-            fontWeight = FontWeight.Bold,
-            style = if (isTotal) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
-            color = if (isTotal) RenCarBlue else (if (isDark) Color.White else Color(0xFF0F172A))
+            text = numeric,
+            style = numericStyle,
+            color = color,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }

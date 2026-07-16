@@ -97,6 +97,7 @@ class AuthorizedRequestExecutor @Inject constructor(
             fullName = fullName,
             phone = phone,
             role = role.toUserRole(),
+            referralCode = referralCode,
         )
 
     private fun String.toUserRole(): UserRole =

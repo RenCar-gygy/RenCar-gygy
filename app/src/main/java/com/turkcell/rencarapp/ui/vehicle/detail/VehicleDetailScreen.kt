@@ -30,8 +30,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.turkcell.rencarapp.data.rental.RentalPlan
+import com.turkcell.rencarapp.data.rental.defaultQuoteMinutes
 import com.turkcell.rencarapp.data.vehicle.VehiclePriceFormatter
 import com.turkcell.rencarapp.ui.map.MapLibreMapView
+import com.turkcell.rencarapp.ui.rental.confirmation.PlanItem
 import com.turkcell.rencarapp.ui.map.MapVehiclePin
 import com.turkcell.rencarapp.ui.map.VehicleCategory
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -43,7 +46,7 @@ private val RenCarBlueGlow = Color(0x662563EB)
 @Composable
 fun VehicleDetailRoute(
     onNavigateBack: () -> Unit,
-    onNavigateToConfirmation: (String) -> Unit,
+    onNavigateToConfirmation: (String, com.turkcell.rencarapp.data.rental.RentalPlan) -> Unit,
     onNavigateToActiveRental: (String) -> Unit,
     viewModel: VehicleDetailViewModel = hiltViewModel()
 ) {
@@ -58,7 +61,7 @@ fun VehicleDetailRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is VehicleDetailEffect.NavigateBack -> onNavigateBack()
-                is VehicleDetailEffect.NavigateToConfirmation -> onNavigateToConfirmation(effect.vehicleId)
+                is VehicleDetailEffect.NavigateToConfirmation -> onNavigateToConfirmation(effect.vehicleId, effect.plan)
                 is VehicleDetailEffect.NavigateToActiveRental -> onNavigateToActiveRental(effect.rentalId)
                 is VehicleDetailEffect.ShowMessage -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
@@ -91,7 +94,7 @@ fun VehicleDetailScreen(
             val pin = remember(state.vehicle) {
                 MapVehiclePin(
                     id = state.vehicle.id,
-                    priceLabel = VehiclePriceFormatter.mapPinLabel(state.vehicle.pricePerDay),
+                    priceLabel = VehiclePriceFormatter.mapPinLabel(state.vehicle),
                     brand = state.vehicle.brand,
                     model = state.vehicle.model,
                     plate = state.vehicle.plate,
@@ -279,6 +282,65 @@ fun VehicleDetailScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
+                        Text(
+                            text = "Kiralama planı",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (isDark) Color.White else Color(0xFF0F172A),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            PlanItem(
+                                title = "Dakikalık",
+                                price = VehiclePriceFormatter.planPriceLabel(state.vehicle, RentalPlan.PER_MINUTE),
+                                isSelected = state.selectedPlan == RentalPlan.PER_MINUTE,
+                                onClick = {
+                                    onIntent(
+                                        VehicleDetailIntent.PlanChanged(
+                                            RentalPlan.PER_MINUTE,
+                                            RentalPlan.PER_MINUTE.defaultQuoteMinutes(),
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                isDark = isDark,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            PlanItem(
+                                title = "Saatlik",
+                                price = VehiclePriceFormatter.planPriceLabel(state.vehicle, RentalPlan.HOURLY),
+                                isSelected = state.selectedPlan == RentalPlan.HOURLY,
+                                onClick = {
+                                    onIntent(
+                                        VehicleDetailIntent.PlanChanged(
+                                            RentalPlan.HOURLY,
+                                            RentalPlan.HOURLY.defaultQuoteMinutes(),
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                isDark = isDark,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            PlanItem(
+                                title = "Günlük",
+                                price = VehiclePriceFormatter.planPriceLabel(state.vehicle, RentalPlan.DAILY),
+                                isSelected = state.selectedPlan == RentalPlan.DAILY,
+                                onClick = {
+                                    onIntent(
+                                        VehicleDetailIntent.PlanChanged(
+                                            RentalPlan.DAILY,
+                                            RentalPlan.DAILY.defaultQuoteMinutes(),
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                isDark = isDark,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
                         // Fiyat ve Rezervasyon Paneli
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
@@ -298,23 +360,34 @@ fun VehicleDetailScreen(
                                     )
                                     Row(verticalAlignment = Alignment.Bottom) {
                                         Text(
-                                            text = state.estimatedPrice ?: VehiclePriceFormatter.minutelyLabel(state.vehicle.pricePerDay).substringBefore(" "),
+                                            text = VehiclePriceFormatter.planPriceAmount(
+                                                state.vehicle,
+                                                state.selectedPlan,
+                                            ),
                                             style = MaterialTheme.typography.headlineMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = RenCarBlue
                                         )
                                         Text(
-                                            text = " / dk",
+                                            text = VehiclePriceFormatter.planUnitSuffix(state.selectedPlan),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
                                             modifier = Modifier.padding(bottom = 4.dp, start = 2.dp)
+                                        )
+                                    }
+                                    if (!state.isReservable && state.unavailableMessage != null) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = state.unavailableMessage,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFFE65100),
                                         )
                                     }
                                 }
 
                                 Button(
                                     onClick = { onIntent(VehicleDetailIntent.ReserveClicked) },
-                                    enabled = !state.isReserving,
+                                    enabled = !state.isReserving && state.isReservable,
                                     modifier = Modifier
                                         .height(52.dp)
                                         .shadow(8.dp, RoundedCornerShape(14.dp), spotColor = RenCarBlueGlow),
