@@ -4,8 +4,11 @@ import com.turkcell.rencarapp.data.auth.AuthorizedRequestExecutor
 import com.turkcell.rencarapp.data.network.api.RentalApi
 import com.turkcell.rencarapp.data.network.dto.ActiveRentalResponseDto
 import com.turkcell.rencarapp.data.network.dto.CreateRentalDto
+import com.turkcell.rencarapp.data.network.dto.PayRentalDto
+import com.turkcell.rencarapp.data.network.dto.PayRentalResponseDto
 import com.turkcell.rencarapp.data.network.dto.RentalPhotosState
 import com.turkcell.rencarapp.data.network.dto.RentalResponseDto
+import com.turkcell.rencarapp.data.network.dto.RentalStatsResponseDto
 import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
 import com.turkcell.rencarapp.data.network.toApiDateTimeString
 import com.turkcell.rencarapp.data.network.dto.RentalPlan as NetworkRentalPlan
@@ -104,6 +107,28 @@ class DefaultRentalRepository @Inject constructor(
             rentalApi.cancel(authorization = authorization, id = rentalId)
         }
 
+    override suspend fun pay(rentalId: String, request: PayRentalRequest): Result<PayRentalResult> {
+        if (request.method == PaymentMethod.CARD && request.cardId.isNullOrBlank()) {
+            return Result.failure(IllegalArgumentException("Kart ile ödeme için kayıtlı bir kart seçin."))
+        }
+        return authorizedCall { authorization ->
+            rentalApi.pay(
+                authorization = authorization,
+                id = rentalId,
+                body = PayRentalDto(
+                    method = request.method.name,
+                    cardId = if (request.method == PaymentMethod.CARD) request.cardId else null,
+                    discountCode = request.discountCode,
+                ),
+            ).toDomain()
+        }
+    }
+
+    override suspend fun getStats(): Result<RentalStats> =
+        authorizedCall { authorization ->
+            rentalApi.getStats(authorization = authorization).toDomain()
+        }
+
     private suspend fun <T> authorizedCall(block: suspend (authorization: String) -> T): Result<T> =
         authorizedRequestExecutor.execute(block)
 
@@ -122,6 +147,8 @@ class DefaultRentalRepository @Inject constructor(
             durationMinutes = durationMinutes,
             status = status.toRentalStatus(),
             paymentStatus = paymentStatus,
+            discountAmount = discountAmount,
+            paymentMethod = paymentMethod,
             vehicleBrand = vehicle.brand,
             vehicleModel = vehicle.model,
             vehiclePlate = vehicle.plate,
@@ -140,6 +167,28 @@ class DefaultRentalRepository @Inject constructor(
             RentalStatus.COMPLETED.name -> RentalStatus.COMPLETED
             RentalStatus.CANCELLED.name -> RentalStatus.CANCELLED
             RentalStatus.PREPARING.name -> RentalStatus.PREPARING
-            else -> RentalStatus.ACTIVE
+            else -> RentalStatus.COMPLETED
         }
+
+    private fun PayRentalResponseDto.toDomain(): PayRentalResult =
+        PayRentalResult(
+            rentalId = rentalId,
+            paymentStatus = paymentStatus,
+            method = method,
+            totalPrice = totalPrice,
+            discountAmount = discountAmount,
+            paidAmount = paidAmount,
+            walletBalance = walletBalance,
+            cardBrand = card?.brand,
+            cardLast4 = card?.last4,
+        )
+
+    private fun RentalStatsResponseDto.toDomain(): RentalStats =
+        RentalStats(
+            month = month,
+            tripCount = tripCount,
+            totalSpent = totalSpent,
+            totalMinutes = totalMinutes,
+            totalKm = totalKm,
+        )
 }

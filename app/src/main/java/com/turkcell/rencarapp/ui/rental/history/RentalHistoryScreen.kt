@@ -16,15 +16,19 @@ import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 
@@ -32,13 +36,26 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun RentalHistoryRoute(
     viewModel: RentalHistoryViewModel = hiltViewModel(),
+    onNavigateToSummary: (String) -> Unit,
     onShowSnackbar: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(RentalHistoryIntent.LoadHistory)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
+                is RentalHistoryEffect.NavigateToSummary -> onNavigateToSummary(effect.rentalId)
                 is RentalHistoryEffect.ShowError -> onShowSnackbar(effect.message)
                 is RentalHistoryEffect.ShowToast -> onShowSnackbar(effect.message)
             }
@@ -98,7 +115,7 @@ fun RentalHistoryScreen(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "${state.monthlyTripCount} Yolculuk • ₺${state.monthlyTotalSpent} Toplam",
+                    text = "${state.monthlyTripCount} yolculuk • ${String.format(java.util.Locale.forLanguageTag("tr-TR"), "₺%.0f", state.monthlyTotalSpent)} toplam",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Medium
                     ),
@@ -122,7 +139,8 @@ fun RentalHistoryScreen(
                 items(state.rentals) { rental ->
                     RentalHistoryCard(
                         model = rental,
-                        onClick = { onIntent(RentalHistoryIntent.RentalClicked(rental.id)) }
+                        onClick = { onIntent(RentalHistoryIntent.RentalClicked(rental.id)) },
+                        onPayClick = { onIntent(RentalHistoryIntent.PayRentalClicked(rental.id)) },
                     )
                 }
             }
@@ -133,7 +151,8 @@ fun RentalHistoryScreen(
 @Composable
 fun RentalHistoryCard(
     model: RentalUiModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onPayClick: () -> Unit,
 ) {
     // Elegant, modern ve düz (flat) kart tasarımı
     Card(
@@ -202,6 +221,7 @@ fun RentalHistoryCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     InfoChip(text = model.durationText)
                     InfoChip(text = model.distanceText)
+                    PaymentStatusChip(isPaid = model.isPaid)
                 }
             }
 
@@ -218,16 +238,52 @@ fun RentalHistoryCard(
                     color = MaterialTheme.colorScheme.primary
                 )
 
+                if (!model.paymentMethodLabel.isNullOrBlank()) {
+                    Text(
+                        text = model.paymentMethodLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = "Detaya Git",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
+                if (!model.isPaid) {
+                    TextButton(
+                        onClick = onPayClick,
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                    ) {
+                        Text(
+                            text = "Öde",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                    }
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = "Detaya Git",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+fun PaymentStatusChip(isPaid: Boolean) {
+    val background = if (isPaid) Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+    val content = if (isPaid) Color(0xFF2E7D32) else Color(0xFFE65100)
+    val label = if (isPaid) "Ödendi" else "Ödenmedi"
+
+    Surface(color = background, shape = CircleShape) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = content,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
     }
 }
 

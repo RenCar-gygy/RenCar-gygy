@@ -20,13 +20,22 @@ class DefaultVehicleRepository @Inject constructor(
         includeBusy: Boolean,
     ): Result<List<Vehicle>> =
         authorizedCall { authorization ->
-            vehicleApi.listAvailable(
-                authorization = authorization,
-                type = type?.name,
-                segment = segment?.name,
-                limit = DEFAULT_PAGE_LIMIT,
-                includeBusy = if (includeBusy) "true" else null,
-            ).map { it.toDomain() }
+            val allVehicles = mutableListOf<Vehicle>()
+            var page = 1
+            while (page <= MAX_PAGES) {
+                val batch = vehicleApi.listAvailable(
+                    authorization = authorization,
+                    type = type?.name,
+                    segment = segment?.name,
+                    page = page,
+                    limit = DEFAULT_PAGE_LIMIT,
+                    includeBusy = if (includeBusy) "true" else null,
+                ).map { it.toDomain() }
+                allVehicles += batch
+                if (batch.size < DEFAULT_PAGE_LIMIT) break
+                page++
+            }
+            allVehicles
         }
 
     override suspend fun getById(id: String): Result<Vehicle> =
@@ -102,10 +111,11 @@ class DefaultVehicleRepository @Inject constructor(
             VehicleStatus.RESERVED.name -> VehicleStatus.RESERVED
             VehicleStatus.RENTED.name -> VehicleStatus.RENTED
             VehicleStatus.MAINTENANCE.name -> VehicleStatus.MAINTENANCE
-            else -> VehicleStatus.AVAILABLE
+            else -> VehicleStatus.MAINTENANCE
         }
 
     private companion object {
         const val DEFAULT_PAGE_LIMIT = 100
+        const val MAX_PAGES = 20
     }
 }

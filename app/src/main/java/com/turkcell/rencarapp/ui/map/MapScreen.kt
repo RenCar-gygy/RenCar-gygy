@@ -62,6 +62,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.rencarapp.ui.theme.RenCarAppTheme
 import com.turkcell.rencarapp.data.vehicle.VehicleType
@@ -131,17 +134,36 @@ private fun mapColors(): MapColors {
 @Composable
 fun MapRoute(
     onNavigateToVehicleDetail: (String, Double?, Double?) -> Unit,
+    onNavigateToActiveRental: (String) -> Unit,
+    onNavigateToConfirmation: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(MapIntent.RefreshActiveSession)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is MapEffect.NavigateToVehicleDetail -> {
                     onNavigateToVehicleDetail(effect.vehicleId, effect.userLat, effect.userLng)
+                }
+                is MapEffect.NavigateToActiveRental -> {
+                    onNavigateToActiveRental(effect.rentalId)
+                }
+                is MapEffect.NavigateToConfirmation -> {
+                    onNavigateToConfirmation(effect.vehicleId)
                 }
                 is MapEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
@@ -758,6 +780,60 @@ private fun VehicleMapPin(
 }
 
 @Composable
+private fun MapActiveSessionBanner(
+    session: MapActiveSession,
+    colors: MapColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(RenCarBlue.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(RenCarBlue),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.DirectionsCar,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = session.title,
+                color = colors.sheetTitle,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = session.subtitle,
+                color = colors.sheetSubtitle,
+                fontSize = 12.sp,
+            )
+        }
+        Text(
+            text = if (session.type == MapActiveSessionType.RENTAL) "Devam" else "Onayla",
+            color = RenCarBlue,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
 private fun MapBottomSheet(
     state: MapUiState,
     colors: MapColors,
@@ -772,6 +848,15 @@ private fun MapBottomSheet(
             .background(colors.sheetBackground)
             .padding(horizontal = 20.dp, vertical = 20.dp),
     ) {
+        state.activeSession?.let { session ->
+            MapActiveSessionBanner(
+                session = session,
+                colors = colors,
+                onClick = { onIntent(MapIntent.ActiveSessionClicked) },
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

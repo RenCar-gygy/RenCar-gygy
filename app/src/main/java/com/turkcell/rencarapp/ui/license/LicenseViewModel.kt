@@ -42,6 +42,7 @@ class LicenseViewModel @Inject constructor(
     fun onIntent(intent: LicenseIntent) {
         when (intent) {
             LicenseIntent.BackClicked -> logoutAndNavigateToLogin()
+            LicenseIntent.CancelRequestClicked -> cancelVerificationRequest()
             LicenseIntent.UploadFrontClicked -> requestCameraCapture(LicenseImageType.FRONT)
             LicenseIntent.UploadBackClicked -> requestCameraCapture(LicenseImageType.BACK)
             LicenseIntent.UploadSelfieClicked -> requestCameraCapture(LicenseImageType.SELFIE)
@@ -72,6 +73,7 @@ class LicenseViewModel @Inject constructor(
                     isSelfieUploaded = true,
                     activeStepIndex = 2,
                     isContinueEnabled = true,
+                    isAwaitingApproval = false,
                     rejectReason = null,
                     frontPreviewBytes = null,
                     backPreviewBytes = null,
@@ -83,6 +85,7 @@ class LicenseViewModel @Inject constructor(
                     isSelfieUploaded = true,
                     activeStepIndex = 2,
                     isContinueEnabled = false,
+                    isAwaitingApproval = true,
                     rejectReason = null,
                     frontPreviewBytes = null,
                     backPreviewBytes = null,
@@ -94,6 +97,7 @@ class LicenseViewModel @Inject constructor(
                     isSelfieUploaded = false,
                     activeStepIndex = 0,
                     isContinueEnabled = false,
+                    isAwaitingApproval = false,
                     rejectReason = rejectReason,
                     frontPreviewBytes = null,
                     backPreviewBytes = null,
@@ -105,6 +109,7 @@ class LicenseViewModel @Inject constructor(
                     isSelfieUploaded = false,
                     activeStepIndex = 0,
                     isContinueEnabled = false,
+                    isAwaitingApproval = false,
                     rejectReason = null,
                     frontPreviewBytes = null,
                     backPreviewBytes = null,
@@ -226,6 +231,11 @@ class LicenseViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
             sendEffect(LicenseEffect.NavigateToLogin)
         }
+    }
+
+    private fun cancelVerificationRequest() {
+        if (!_uiState.value.isAwaitingApproval || _uiState.value.isLoading) return
+        logoutAndNavigateToLogin()
     }
 
     private fun continueFlow() {

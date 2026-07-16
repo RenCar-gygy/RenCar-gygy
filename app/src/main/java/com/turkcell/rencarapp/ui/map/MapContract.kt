@@ -15,6 +15,19 @@ enum class MapLocationPrecision {
     APPROXIMATE,
 }
 
+enum class MapActiveSessionType {
+    RENTAL,
+    RESERVATION,
+}
+
+data class MapActiveSession(
+    val type: MapActiveSessionType,
+    val rentalId: String? = null,
+    val vehicleId: String? = null,
+    val title: String,
+    val subtitle: String,
+)
+
 data class MapVehiclePin(
     val id: String,
     val priceLabel: String,
@@ -51,6 +64,7 @@ data class MapUiState(
     val shouldFocusMyLocation: Boolean = false,
     val shouldFocusVisiblePins: Boolean = false,
     val shouldFocusSearchArea: Boolean = false,
+    val activeSession: MapActiveSession? = null,
 )
 
 sealed interface MapIntent {
@@ -71,6 +85,8 @@ sealed interface MapIntent {
         val isPreciseLocation: Boolean,
     ) : MapIntent
     data object FindNearestClicked : MapIntent
+    data object ActiveSessionClicked : MapIntent
+    data object RefreshActiveSession : MapIntent
     data class VehiclePinClicked(val vehicleId: String) : MapIntent
 }
 
@@ -80,5 +96,7 @@ sealed interface MapEffect {
         val userLat: Double? = null,
         val userLng: Double? = null,
     ) : MapEffect
+    data class NavigateToActiveRental(val rentalId: String) : MapEffect
+    data class NavigateToConfirmation(val vehicleId: String) : MapEffect
     data class ShowError(val message: String) : MapEffect
 }

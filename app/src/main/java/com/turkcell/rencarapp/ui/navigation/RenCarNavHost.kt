@@ -8,11 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -40,6 +45,7 @@ import com.turkcell.rencarapp.ui.rental.start_photos.StartPhotosRoute
 import com.turkcell.rencarapp.ui.vehicle.detail.VehicleDetailRoute
 import com.turkcell.rencarapp.ui.rental.history.RentalHistoryRoute
 import com.turkcell.rencarapp.ui.rental.summary.RentalSummaryRoute
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -48,17 +54,30 @@ fun RenCarNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute in RenCarDestination.bottomBarRoutes
+    val currentDestination = backStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val showBottomBar = currentDestination?.hierarchy?.any { destination ->
+        destination.route in RenCarDestination.bottomBarRoutes
+    } == true
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val showSnackbar: (String) -> Unit = remember(snackbarHostState) {
+        { message ->
+            snackbarScope.launch {
+                snackbarHostState.showSnackbar(message)
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
                 RenCarBottomBar(
-                    currentRoute = currentRoute,
+                    currentDestination = currentDestination,
                     onTabSelected = { tab -> navController.navigateToMainTab(tab.destination) },
                 )
             }
@@ -201,17 +220,29 @@ fun RenCarNavHost(
                         onNavigateToVehicleDetail = { vehicleId, lat, lng ->
                             navController.navigate(RenCarDestination.vehicleDetailRoute(vehicleId, lat, lng))
                         },
+                        onNavigateToActiveRental = { rentalId ->
+                            navController.navigate(RenCarDestination.activeRentalRoute(rentalId)) {
+                                popUpTo(RenCarDestination.Map) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToConfirmation = { vehicleId ->
+                            navController.navigate(RenCarDestination.rentalConfirmationRoute(vehicleId, null))
+                        },
                     )
                 }
 
                 composable(RenCarDestination.RentalHistory) {
                     RentalHistoryRoute(
-                        onShowSnackbar = {}
+                        onNavigateToSummary = { rentalId ->
+                            navController.navigate(RenCarDestination.rentalSummaryRoute(rentalId))
+                        },
+                        onShowSnackbar = showSnackbar,
                     )
                 }
                 composable(RenCarDestination.Wallet) {
                     WalletRoute(
-                        onShowSnackbar = { _ -> }
+                        onShowSnackbar = showSnackbar,
                     )
                 }
                 composable(RenCarDestination.Profile) {
@@ -222,11 +253,9 @@ fun RenCarNavHost(
                             }
                         },
                         onNavigateToWallet = {
-                            navController.navigate(RenCarDestination.Wallet) {
-                                launchSingleTop = true
-                            }
+                            navController.navigateToMainTab(RenCarDestination.Wallet)
                         },
-                        onShowSnackbar = { _ -> },
+                        onShowSnackbar = showSnackbar,
                     )
                 }
 
@@ -257,11 +286,16 @@ fun RenCarNavHost(
                     ) {
                         VehicleDetailRoute(
                             onNavigateBack = { navController.popBackStack() },
-                            onNavigateToConfirmation = { vehicleId ->
-                                navController.navigate(RenCarDestination.rentalConfirmationRoute(vehicleId))
+                            onNavigateToConfirmation = { vehicleId, plan ->
+                                navController.navigate(
+                                    RenCarDestination.rentalConfirmationRoute(vehicleId, plan.name)
+                                )
                             },
                             onNavigateToActiveRental = { rentalId ->
-                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
+                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId)) {
+                                    popUpTo(RenCarDestination.Map) { inclusive = false }
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -271,13 +305,21 @@ fun RenCarNavHost(
                         route = RenCarDestination.RentalConfirmation,
                         arguments = listOf(
                             navArgument(RenCarDestination.ARG_VEHICLE_ID) { type = NavType.StringType },
+                            navArgument(RenCarDestination.ARG_PLAN) {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
                         ),
                     ) {
                         RentalConfirmationRoute(
                             onNavigateBack = { navController.popBackStack() },
                             // GÜNCELLENDİ: Onaydan sonra doğrudan Aktif Kiralamaya (Kilidi Aç) geçer
                             onNavigateToActiveRental = { rentalId ->
-                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId))
+                                navController.navigate(RenCarDestination.activeRentalRoute(rentalId)) {
+                                    popUpTo(RenCarDestination.Map) { inclusive = false }
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -298,7 +340,10 @@ fun RenCarNavHost(
                             },
                             onNavigateBackAfterCancel = {
                                 navController.popBackStack(RenCarDestination.Map, false)
-                            }
+                            },
+                            onNavigateBackToMap = {
+                                navController.popBackStack(RenCarDestination.Map, false)
+                            },
                         )
                     }
 
@@ -370,7 +415,7 @@ fun RenCarNavHost(
                                     popUpTo(RenCarDestination.MainGraph) { inclusive = true }
                                 }
                             },
-                            onShowSnackbar = { _ -> }
+                            onShowSnackbar = showSnackbar
                         )
                     }
                 }

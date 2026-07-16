@@ -4,8 +4,11 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,6 +17,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -21,10 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -35,40 +44,66 @@ fun ProfileRoute(
     onShowSnackbar: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val clipboardManager = LocalClipboardManager.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(ProfileIntent.LoadProfile)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(viewModel.effect) {
         viewModel.effect.collectLatest { effect ->
             when (effect) {
                 is ProfileEffect.NavigateToSplash -> onNavigateToSplash()
-                is ProfileEffect.NavigateToWallet -> onNavigateToWallet() // Cüzdana geçiş
                 is ProfileEffect.ShowError -> onShowSnackbar(effect.message)
+                is ProfileEffect.ShowMessage -> onShowSnackbar(effect.message)
+                is ProfileEffect.CopyReferralCode -> {
+                    clipboardManager.setText(AnnotatedString(effect.code))
+                    onShowSnackbar("Davet kodu kopyalandı.")
+                }
             }
         }
     }
 
     ProfileScreen(
         state = state,
-        onIntent = viewModel::onIntent
+        onIntent = viewModel::onIntent,
+        onNavigateToWallet = onNavigateToWallet,
     )
 }
 
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,
-    onIntent: (ProfileIntent) -> Unit
+    onIntent: (ProfileIntent) -> Unit,
+    onNavigateToWallet: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(MaterialTheme.colorScheme.background),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
+            val scrollState = rememberScrollState()
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
             Spacer(modifier = Modifier.height(48.dp))
 
             Row(
@@ -166,10 +201,91 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            if (state.referralCode.isNotBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Davet kodunuz",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Arkadaşlarınız kayıt olurken bu kodu kullanabilir.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = state.referralCode,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            TextButton(onClick = { onIntent(ProfileIntent.CopyReferralCodeClicked) }) {
+                                Text("Kopyala")
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            if (state.monthlyTripCount > 0 || state.monthlyTotalSpent.isNotBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Bu ay",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${state.monthlyTripCount} yolculuk",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        if (state.monthlyTotalSpent.isNotBlank()) {
+                            Text(
+                                text = "${state.monthlyTotalSpent} harcama",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (state.monthlyTotalKm.isNotBlank()) {
+                            Text(
+                                text = state.monthlyTotalKm,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (state.monthlyTotalMinutes.isNotBlank()) {
+                            Text(
+                                text = state.monthlyTotalMinutes,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
             ProfileMenuItem(
                 title = "Ödeme yöntemleri",
                 icon = Icons.Rounded.Payment,
-                onClick = { onIntent(ProfileIntent.MenuItemClicked("Ödeme yöntemleri")) }
+                onClick = onNavigateToWallet,
             )
             ProfileMenuItem(
                 title = "Ayarlar",
@@ -187,7 +303,7 @@ fun ProfileScreen(
                 onClick = { onIntent(ProfileIntent.MenuItemClicked("Davet et")) }
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Tema Butonu En Altta, Çıkış Yap'ın Üstünde
             CustomThemeSwitch(
@@ -197,29 +313,50 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedButton(
+            ProfileLogoutButton(
                 onClick = { onIntent(ProfileIntent.LogoutClicked) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error)
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Çıkış yap", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileLogoutButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val errorColor = MaterialTheme.colorScheme.error
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = errorColor.copy(alpha = 0.1f),
+        border = BorderStroke(1.5.dp, errorColor),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
+                contentDescription = null,
+                tint = errorColor,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Çıkış yap",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = errorColor,
+            )
         }
     }
 }

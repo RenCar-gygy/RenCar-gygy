@@ -19,7 +19,7 @@ import javax.inject.Inject
 class DeliveryPhotosViewModel @Inject constructor(
     private val rentalRepository: RentalRepository,
     private val vehicleRepository: VehicleRepository,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val rentalId: String = checkNotNull(savedStateHandle["rentalId"])
@@ -30,7 +30,7 @@ class DeliveryPhotosViewModel @Inject constructor(
         DeliveryPhotosUiState(
             brand = navVehicleName.substringBefore(" ").trim(),
             model = navVehicleName.substringAfter(" ", missingDelimiterValue = "").trim(),
-            plate = navVehiclePlate
+            plate = navVehiclePlate,
         )
     )
     val uiState: StateFlow<DeliveryPhotosUiState> = _uiState.asStateFlow()
@@ -44,7 +44,16 @@ class DeliveryPhotosViewModel @Inject constructor(
 
     fun onIntent(intent: DeliveryPhotosIntent) {
         when (intent) {
-            is DeliveryPhotosIntent.PhotoBoxToggled -> togglePhotoBox(intent.direction)
+            is DeliveryPhotosIntent.PhotoCaptureRequested -> {
+                viewModelScope.launch {
+                    _effect.send(DeliveryPhotosEffect.LaunchCamera(intent.direction))
+                }
+            }
+            is DeliveryPhotosIntent.PhotoCaptured -> {
+                val updatedPhotos = _uiState.value.photos.toMutableMap()
+                updatedPhotos[intent.direction] = intent.previewUri
+                _uiState.update { it.copy(photos = updatedPhotos) }
+            }
             is DeliveryPhotosIntent.CompletePhotosClicked -> navigateToSummary()
             is DeliveryPhotosIntent.BackClicked -> {
                 viewModelScope.launch { _effect.send(DeliveryPhotosEffect.NavigateBack) }
@@ -64,7 +73,7 @@ class DeliveryPhotosViewModel @Inject constructor(
                                     brand = vehicle.brand,
                                     model = vehicle.model,
                                     plate = vehicle.plate,
-                                    isLoading = false
+                                    isLoading = false,
                                 )
                             }
                         }
@@ -78,21 +87,12 @@ class DeliveryPhotosViewModel @Inject constructor(
         }
     }
 
-    private fun togglePhotoBox(direction: PhotoDirection) {
-        val updatedPhotos = _uiState.value.photos.toMutableMap()
-        updatedPhotos[direction] = if (updatedPhotos[direction] == null) {
-            MARKED_PHOTO_URI
-        } else {
-            null
-        }
-        _uiState.update { it.copy(photos = updatedPhotos) }
-    }
-
     private fun navigateToSummary() {
         if (!_uiState.value.isComplete || _uiState.value.isSubmittingPhotos) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingPhotos = true) }
+            // API karşılığı yok — yalnızca yerel önizleme; özet ekranına yönlendirilir.
             _effect.send(DeliveryPhotosEffect.NavigateToSummary(rentalId))
             _uiState.update { it.copy(isSubmittingPhotos = false) }
         }

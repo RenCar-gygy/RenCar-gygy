@@ -181,6 +181,41 @@ class FakeRentalRepository @Inject constructor() : RentalRepository {
         return Result.success(Unit)
     }
 
+    override suspend fun pay(rentalId: String, request: PayRentalRequest): Result<PayRentalResult> {
+        delay(FAKE_DELAY_MS)
+        val index = rentals.indexOfFirst { it.id == rentalId }
+        if (index < 0) return Result.failure(NoSuchElementException("Kiralama bulunamadı."))
+        val current = rentals[index]
+        rentals[index] = current.copy(paymentStatus = "PAID")
+        return Result.success(
+            PayRentalResult(
+                rentalId = rentalId,
+                paymentStatus = "PAID",
+                method = request.method.name,
+                totalPrice = current.totalPrice,
+                discountAmount = 0.0,
+                paidAmount = current.totalPrice,
+                walletBalance = if (request.method == PaymentMethod.WALLET) 100.0 else null,
+                cardBrand = if (request.method == PaymentMethod.CARD) "VISA" else null,
+                cardLast4 = if (request.method == PaymentMethod.CARD) "4291" else null,
+            )
+        )
+    }
+
+    override suspend fun getStats(): Result<RentalStats> {
+        delay(FAKE_DELAY_MS)
+        val completed = rentals.filter { it.status == RentalStatus.COMPLETED }
+        return Result.success(
+            RentalStats(
+                month = "2026-07",
+                tripCount = completed.size,
+                totalSpent = completed.filter { it.paymentStatus == "PAID" }.sumOf { it.totalPrice },
+                totalMinutes = completed.sumOf { it.durationMinutes },
+                totalKm = completed.sumOf { it.distanceKm },
+            )
+        )
+    }
+
     private fun fakeRental(
         id: String,
         vehicleId: String,
@@ -204,6 +239,8 @@ class FakeRentalRepository @Inject constructor() : RentalRepository {
             durationMinutes = 20,
             status = status,
             paymentStatus = "UNPAID",
+            discountAmount = 0.0,
+            paymentMethod = null,
             vehicleBrand = "Volkswagen",
             vehicleModel = "Passat",
             vehiclePlate = "34 ABC 123",

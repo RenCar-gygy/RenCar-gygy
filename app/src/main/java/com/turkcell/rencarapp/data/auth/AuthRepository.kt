@@ -36,6 +36,7 @@ data class User(
     val fullName: String,
     val phone: String?,
     val role: UserRole,
+    val referralCode: String? = null,
 )
 
 data class AuthTokens(

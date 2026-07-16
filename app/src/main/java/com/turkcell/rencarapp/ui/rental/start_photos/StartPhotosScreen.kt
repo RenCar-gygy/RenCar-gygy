@@ -1,12 +1,7 @@
 package com.turkcell.rencarapp.ui.rental.start_photos
 
-import android.Manifest
-import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -29,12 +24,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.turkcell.rencarapp.ui.common.rememberJpegPhotoCaptureLauncher
 import com.turkcell.rencarapp.ui.rental.delivery_photos.PhotoBox
 import com.turkcell.rencarapp.ui.rental.delivery_photos.PhotoDirection
-import java.io.ByteArrayOutputStream
 
 private val RenCarBlue = Color(0xFF2563EB)
 private val RenCarBlueGlow = Color(0x662563EB)
@@ -50,43 +44,28 @@ fun StartPhotosRoute(
 
     var pendingDirection by remember { mutableStateOf<PhotoDirection?>(null) }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview(),
-    ) { bitmap ->
-        val direction = pendingDirection
-        pendingDirection = null
-        if (bitmap != null && direction != null) {
-            viewModel.onIntent(
-                StartPhotosIntent.PhotoCaptured(
-                    direction = direction,
-                    bytes = bitmap.toPngByteArray(),
-                ),
-            )
-        } else if (direction != null) {
-            Toast.makeText(context, "Fotoğraf çekilmedi.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            cameraLauncher.launch()
-        } else {
+    val launchCamera = rememberJpegPhotoCaptureLauncher(
+        onPhotoCaptured = { bytes ->
+            val direction = pendingDirection
             pendingDirection = null
-            Toast.makeText(context, "Kamera izni gerekli.", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    fun launchCamera(direction: PhotoDirection) {
-        pendingDirection = direction
-        when {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
-                cameraLauncher.launch()
+            if (direction != null) {
+                viewModel.onIntent(
+                    StartPhotosIntent.PhotoCaptured(
+                        direction = direction,
+                        bytes = bytes,
+                    ),
+                )
             }
-            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
+        },
+        onCancelled = {
+            pendingDirection = null
+            Toast.makeText(context, "Fotoğraf çekilmedi.", Toast.LENGTH_SHORT).show()
+        },
+    )
+
+    fun requestCamera(direction: PhotoDirection) {
+        pendingDirection = direction
+        launchCamera()
     }
 
     BackHandler {
@@ -98,7 +77,7 @@ fun StartPhotosRoute(
             when (effect) {
                 is StartPhotosEffect.NavigateBack -> onNavigateBack()
                 is StartPhotosEffect.RideStarted -> onRideStarted()
-                is StartPhotosEffect.LaunchCamera -> launchCamera(effect.direction)
+                is StartPhotosEffect.LaunchCamera -> requestCamera(effect.direction)
                 is StartPhotosEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
@@ -110,12 +89,6 @@ fun StartPhotosRoute(
         state = uiState,
         onIntent = viewModel::onIntent
     )
-}
-
-private fun Bitmap.toPngByteArray(): ByteArray {
-    val stream = ByteArrayOutputStream()
-    compress(Bitmap.CompressFormat.PNG, 100, stream)
-    return stream.toByteArray()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

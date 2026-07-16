@@ -30,6 +30,8 @@ data class Rental(
     val durationMinutes: Int,
     val status: RentalStatus,
     val paymentStatus: String,
+    val discountAmount: Double = 0.0,
+    val paymentMethod: String? = null,
     val vehicleBrand: String,
     val vehicleModel: String,
     val vehiclePlate: String,
@@ -39,6 +41,37 @@ data class CreateRentalRequest(
     val vehicleId: String,
     val plan: RentalPlan = RentalPlan.DAILY,
     val endDate: Instant? = null,
+)
+
+enum class PaymentMethod {
+    WALLET,
+    CARD,
+}
+
+data class PayRentalRequest(
+    val method: PaymentMethod,
+    val cardId: String? = null,
+    val discountCode: String? = null,
+)
+
+data class PayRentalResult(
+    val rentalId: String,
+    val paymentStatus: String,
+    val method: String,
+    val totalPrice: Double,
+    val discountAmount: Double,
+    val paidAmount: Double,
+    val walletBalance: Double?,
+    val cardBrand: String?,
+    val cardLast4: String?,
+)
+
+data class RentalStats(
+    val month: String,
+    val tripCount: Int,
+    val totalSpent: Double,
+    val totalMinutes: Int,
+    val totalKm: Double,
 )
 
 interface RentalRepository {
@@ -70,4 +103,6 @@ interface RentalRepository {
     suspend fun getActive(): Result<com.turkcell.rencarapp.data.network.dto.ActiveRentalResponseDto>
     suspend fun finish(rentalId: String): Result<Rental>
     suspend fun cancel(rentalId: String): Result<Unit>
+    suspend fun pay(rentalId: String, request: PayRentalRequest): Result<PayRentalResult>
+    suspend fun getStats(): Result<RentalStats>
 }
