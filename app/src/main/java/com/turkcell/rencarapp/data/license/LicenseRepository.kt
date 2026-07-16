@@ -15,5 +15,9 @@ data class LicenseInfo(
 interface LicenseRepository {
     suspend fun getStatus(): Result<LicenseInfo>
 
-    suspend fun upload(frontImageBytes: ByteArray, backImageBytes: ByteArray): Result<LicenseInfo>
+    suspend fun upload(
+        frontImageBytes: ByteArray,
+        backImageBytes: ByteArray,
+        selfieImageBytes: ByteArray,
+    ): Result<LicenseInfo>
 }

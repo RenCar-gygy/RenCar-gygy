@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -32,7 +31,6 @@ class RentalHistoryViewModel @Inject constructor(
     private val _effect = Channel<RentalHistoryEffect>(Channel.BUFFERED)
     val effect: Flow<RentalHistoryEffect> = _effect.receiveAsFlow()
 
-    // Locale kullanımı modern yönteme (forLanguageTag) çevrildi
     private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy - HH:mm", Locale.forLanguageTag("tr-TR"))
         .withZone(ZoneId.systemDefault())
 
@@ -57,34 +55,41 @@ class RentalHistoryViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = rentalRepository.listMine()
+            rentalRepository.listMine()
+                .onSuccess { rentals ->
+                    val uiModels = rentals.map { rental ->
+                        val vehicleName = listOf(rental.vehicleBrand, rental.vehicleModel)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" ")
+                            .ifBlank { "Araç ${rental.vehicleId.take(4).uppercase()}" }
 
-            result.onSuccess { rentals ->
-                val uiModels = rentals.map { rental ->
-                    val durationMinutes = Duration.between(rental.startDate, rental.endDate).toMinutes()
+                        RentalUiModel(
+                            id = rental.id,
+                            vehicleName = vehicleName,
+                            dateText = dateFormatter.format(rental.startDate),
+                            durationText = "${rental.durationMinutes} dk",
+                            distanceText = String.format(
+                                Locale.forLanguageTag("tr-TR"),
+                                "%.1f km",
+                                rental.distanceKm
+                            ),
+                            priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
+                        )
+                    }
 
-                    RentalUiModel(
-                        id = rental.id,
-                        vehicleName = "Araç ${rental.vehicleId}",
-                        dateText = dateFormatter.format(rental.startDate),
-                        durationText = "$durationMinutes dk",
-                        distanceText = "12,4 km",
-                        priceText = String.format(Locale.forLanguageTag("tr-TR"), "₺%.2f", rental.totalPrice)
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            rentals = uiModels,
+                            monthlyTripCount = uiModels.size,
+                            monthlyTotalSpent = rentals.sumOf { rental -> rental.totalPrice }
+                        )
+                    }
                 }
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        rentals = uiModels,
-                        monthlyTripCount = uiModels.size,
-                        monthlyTotalSpent = rentals.sumOf { r -> r.totalPrice }
-                    )
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    _effect.send(RentalHistoryEffect.ShowError(error.message ?: "Kiralama geçmişi alınamadı."))
                 }
-            }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false) }
-                _effect.send(RentalHistoryEffect.ShowError(error.message ?: "Kiralama geçmişi alınamadı."))
-            }
         }
     }
 }

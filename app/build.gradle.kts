@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    // ÇAKIŞMA YARATAN O SATIRI TAMAMEN SİLDİK! Orijinal haline döndük.
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
@@ -12,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.turkcell.rencarapp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
@@ -22,18 +23,28 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+}
+
+// JVM 1.8 HATASINI ÇÖZEN, ÇAKIŞMA YARATMAYAN MODERN KOD:
+kotlin {
+    jvmToolchain(11)
 }
 
 dependencies {
@@ -48,15 +59,23 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+
     implementation(libs.androidx.navigation.compose)
+
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.maplibre.android.sdk)
+    implementation(libs.play.services.location)
+
     ksp(libs.hilt.compiler)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
@@ -65,8 +84,9 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    val nav_version = "2.8.0" // veya kullandığınız güncel sürüm
-    implementation("androidx.navigation:navigation-compose:$nav_version")
 
+    implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    implementation(libs.socketio.client)
 }

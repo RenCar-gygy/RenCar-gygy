@@ -15,6 +15,10 @@ sealed interface LoginIntent {
 
 sealed interface LoginEffect {
     data object NavigateBack : LoginEffect
-    data class NavigateToOtp(val phoneNumber: String) : LoginEffect
+    data class NavigateToOtp(
+        val phoneNumber: String,
+        val expiresAtEpochSeconds: Long? = null,
+    ) : LoginEffect
     data object NavigateToRegister : LoginEffect
+    data class ShowError(val message: String) : LoginEffect
 }

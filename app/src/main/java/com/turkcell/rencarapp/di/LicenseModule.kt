@@ -1,6 +1,6 @@
 package com.turkcell.rencarapp.di
 
-import com.turkcell.rencarapp.data.license.FakeLicenseRepository
+import com.turkcell.rencarapp.data.license.DefaultLicenseRepository
 import com.turkcell.rencarapp.data.license.LicenseRepository
 import dagger.Binds
 import dagger.Module
@@ -13,5 +13,5 @@ import javax.inject.Singleton
 abstract class LicenseModule {
     @Binds
     @Singleton
-    abstract fun bindLicenseRepository(impl: FakeLicenseRepository): LicenseRepository
+    abstract fun bindLicenseRepository(impl: DefaultLicenseRepository): LicenseRepository
 }

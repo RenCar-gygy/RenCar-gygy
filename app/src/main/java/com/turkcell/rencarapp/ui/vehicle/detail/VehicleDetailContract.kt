@@ -1,19 +1,18 @@
 package com.turkcell.rencarapp.ui.vehicle.detail
 
-import com.turkcell.rencarapp.data.network.dto.VehicleResponseDto
+import com.turkcell.rencarapp.data.rental.RentalPlan
+import com.turkcell.rencarapp.data.vehicle.Vehicle
 
 /**
  * Vehicle Detail ekranının durumunu temsil eder.
  */
 data class VehicleDetailUiState(
-    val vehicle: VehicleResponseDto? = null,
+    val vehicle: Vehicle? = null,
     val isLoading: Boolean = false,
+    val isReserving: Boolean = false,
     val error: String? = null,
-    // API'da olmayan ancak tasarımda bulunan mock alanlar
-    val fuelLevel: String = "%72",
-    val range: String = "~480 km",
-    val transmission: String = "Manuel",
-    val seatingCapacity: String = "5 kişi"
+    val distanceLabel: String = "", // Dinamik mesafe bilgisi
+    val estimatedPrice: String? = null, // API'den gelen tahmini fiyat
 )
 
 /**
@@ -23,6 +22,7 @@ sealed interface VehicleDetailIntent {
     data object LoadVehicle : VehicleDetailIntent
     data object BackClicked : VehicleDetailIntent
     data object ReserveClicked : VehicleDetailIntent
+    data class PlanChanged(val plan: RentalPlan, val minutes: Int) : VehicleDetailIntent
     data object UnlockClicked : VehicleDetailIntent
 }
 
@@ -32,5 +32,6 @@ sealed interface VehicleDetailIntent {
 sealed interface VehicleDetailEffect {
     data object NavigateBack : VehicleDetailEffect
     data class NavigateToConfirmation(val vehicleId: String) : VehicleDetailEffect
+    data class NavigateToActiveRental(val rentalId: String) : VehicleDetailEffect
     data class ShowMessage(val message: String) : VehicleDetailEffect
 }

@@ -6,23 +6,23 @@ sealed interface RentalSummaryIntent {
 }
 
 sealed interface RentalSummaryEffect {
-    data class NavigateToDeliveryPhotos(val vehicleId: String) : RentalSummaryEffect
+    data object NavigateToHome : RentalSummaryEffect // Ödeme bitince ana sayfaya dönmeli
     data class ShowToast(val message: String) : RentalSummaryEffect
     data class ShowError(val message: String) : RentalSummaryEffect
 }
 
 data class RentalSummaryUiState(
     val isLoading: Boolean = false,
-    val vehicleId: String = "",
+    val rentalId: String = "",
     val vehicleName: String = "",
     val plate: String = "",
-    val durationText: String = "24 dk",
-    val distanceText: String = "12,4 km",
-    val rentalFee: String = "₺108,00",
-    val startFee: String = "₺15,00",
-    val serviceFee: String = "₺7,50",
-    val discount: String = "-₺20,00",
-    val totalFee: String = "₺110,50",
+    val durationText: String = "",
+    val distanceText: String = "",
+    val rentalFee: String = "",
+    val startFee: String = "",
+    val serviceFee: String = "",
+    val discount: String = "",
+    val totalFee: String = "",
     val cardBrand: String = "VISA",
     val cardLast4: String = "4291"
 )

@@ -2,6 +2,7 @@ package com.turkcell.rencarapp.ui.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.turkcell.rencarapp.data.auth.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class LoginViewModel @Inject constructor() : ViewModel() {
+class LoginViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -42,9 +45,27 @@ class LoginViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun sendCode() {
-        val phone = _uiState.value.phoneNumber
-        if (!_uiState.value.isSendCodeEnabled || _uiState.value.isLoading) return
-        sendEffect(LoginEffect.NavigateToOtp(phoneNumber = phone))
+        val state = _uiState.value
+        if (!state.isSendCodeEnabled || state.isLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = authRepository.requestOtp(state.phoneNumber)
+            _uiState.update { it.copy(isLoading = false) }
+
+            result
+                .onSuccess { challenge ->
+                    sendEffect(
+                        LoginEffect.NavigateToOtp(
+                            phoneNumber = state.phoneNumber,
+                            expiresAtEpochSeconds = challenge.expiresAtEpochSeconds,
+                        ),
+                    )
+                }
+                .onFailure { error ->
+                    sendEffect(LoginEffect.ShowError(error.message ?: "Kod gönderilemedi."))
+                }
+        }
     }
 
     private fun sendEffect(effect: LoginEffect) {

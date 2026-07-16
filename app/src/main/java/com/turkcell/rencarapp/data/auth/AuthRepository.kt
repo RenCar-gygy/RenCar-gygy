@@ -1,5 +1,29 @@
 package com.turkcell.rencarapp.data.auth
 
+data class OtpChallenge(
+    val message: String,
+    val phone: String,
+    val expiresAtEpochSeconds: Long? = null,
+)
+
+interface AuthRepository {
+    suspend fun requestOtp(phone: String): Result<OtpChallenge>
+
+    suspend fun verifyOtp(phone: String, code: String): Result<AuthTokens>
+
+    suspend fun register(
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+        referralCode: String? = null,
+    ): Result<AuthTokens>
+
+    suspend fun logout(): Result<Unit>
+
+    suspend fun getCurrentUser(): Result<User>
+}
+
 enum class UserRole {
     PENDING,
     CUSTOMER,
@@ -19,18 +43,3 @@ data class AuthTokens(
     val refreshToken: String,
     val user: User,
 )
-
-interface AuthRepository {
-    suspend fun register(
-        email: String,
-        password: String,
-        fullName: String,
-        phone: String?,
-    ): Result<AuthTokens>
-
-    suspend fun login(email: String, password: String): Result<AuthTokens>
-
-    suspend fun logout(): Result<Unit>
-
-    suspend fun getCurrentUser(): Result<User>
-}

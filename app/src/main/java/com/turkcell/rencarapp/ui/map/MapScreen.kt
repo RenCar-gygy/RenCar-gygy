@@ -1,5 +1,6 @@
 package com.turkcell.rencarapp.ui.map
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,15 +23,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,16 +45,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.turkcell.rencarapp.ui.theme.RenCarAppTheme
+import com.turkcell.rencarapp.data.vehicle.VehicleType
+import org.maplibre.android.geometry.LatLng
 
 private val RenCarBlue = Color(0xFF2563EB)
 private val EconomicOrange = Color(0xFFF97316)
@@ -80,69 +98,54 @@ private data class MapColors(
 )
 
 @Composable
-private fun mapColors(darkTheme: Boolean): MapColors =
-    if (darkTheme) {
+private fun mapColors(): MapColors {
+    val colorScheme = androidx.compose.material3.MaterialTheme.colorScheme
+    
+    return remember(colorScheme) {
         MapColors(
-            mapBackground = Color(0xFF1A1F2E),
-            mapBlock = Color(0xFF252B3B),
-            mapRoad = Color(0xFF2F3648),
-            mapPark = Color(0xFF1E3A2F),
-            searchBackground = Color(0xFF111827),
-            searchBorder = Color(0xFF334155),
-            searchText = Color.White,
-            searchPlaceholder = Color(0xFF64748B),
-            filterButtonBackground = Color(0xFF111827),
-            filterButtonBorder = Color(0xFF334155),
-            fabBackground = Color(0xFF111827),
-            fabIcon = RenCarBlue,
-            sheetBackground = Color(0xFF0F172A),
-            sheetTitle = Color.White,
-            sheetSubtitle = Color(0xFF94A3B8),
-            chipInactiveBackground = Color(0xFF1E293B),
-            chipInactiveText = Color(0xFFCBD5E1),
-            chipActiveBackground = RenCarBlue,
-            chipActiveText = Color.White,
-            inUsePin = Color(0xFF64748B),
-            buttonShadow = Color(0x662563EB),
-        )
-    } else {
-        MapColors(
-            mapBackground = Color(0xFFE8EDF3),
-            mapBlock = Color(0xFFF5F7FA),
-            mapRoad = Color.White,
-            mapPark = Color(0xFFD1FAE5),
-            searchBackground = Color.White,
-            searchBorder = Color(0xFFE2E8F0),
-            searchText = Color(0xFF0F172A),
-            searchPlaceholder = Color(0xFF94A3B8),
-            filterButtonBackground = Color.White,
-            filterButtonBorder = Color(0xFFE2E8F0),
-            fabBackground = Color.White,
-            fabIcon = RenCarBlue,
-            sheetBackground = Color.White,
-            sheetTitle = Color(0xFF0F172A),
-            sheetSubtitle = Color(0xFF64748B),
-            chipInactiveBackground = Color.White,
-            chipInactiveText = Color(0xFF64748B),
-            chipActiveBackground = RenCarBlue,
-            chipActiveText = Color.White,
-            inUsePin = Color(0xFF94A3B8),
-            buttonShadow = Color(0x402563EB),
+            mapBackground = colorScheme.background,
+            mapBlock = colorScheme.surfaceVariant,
+            mapRoad = colorScheme.surface,
+            mapPark = colorScheme.primaryContainer.copy(alpha = 0.2f),
+            searchBackground = colorScheme.surface,
+            searchBorder = colorScheme.outlineVariant,
+            searchText = colorScheme.onSurface,
+            searchPlaceholder = colorScheme.onSurfaceVariant,
+            filterButtonBackground = colorScheme.surface,
+            filterButtonBorder = colorScheme.outlineVariant,
+            fabBackground = colorScheme.surface,
+            fabIcon = colorScheme.primary,
+            sheetBackground = colorScheme.surface,
+            sheetTitle = colorScheme.onSurface,
+            sheetSubtitle = colorScheme.onSurfaceVariant,
+            chipInactiveBackground = colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            chipInactiveText = colorScheme.onSurfaceVariant,
+            chipActiveBackground = colorScheme.primary,
+            chipActiveText = colorScheme.onPrimary,
+            inUsePin = colorScheme.outline,
+            buttonShadow = colorScheme.primary.copy(alpha = 0.2f),
         )
     }
+}
 
 @Composable
 fun MapRoute(
-    onNavigateToVehicleDetail: (String) -> Unit,
+    onNavigateToVehicleDetail: (String, Double?, Double?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is MapEffect.NavigateToVehicleDetail -> onNavigateToVehicleDetail(effect.vehicleId)
+                is MapEffect.NavigateToVehicleDetail -> {
+                    onNavigateToVehicleDetail(effect.vehicleId, effect.userLat, effect.userLng)
+                }
+                is MapEffect.ShowError -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -160,59 +163,173 @@ fun MapScreen(
     onIntent: (MapIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = mapColors(isSystemInDarkTheme())
+    val colors = mapColors()
+    val userLocationState = rememberMapUserLocation()
+    val mapCameraActions = remember { MapCameraActions() }
+
+    if (userLocationState.isPermissionDenied) {
+        MapPermissionDeniedScreen(
+            colors = colors,
+            shouldOpenSettings = userLocationState.shouldOpenSettings,
+            onRequestPermission = userLocationState.requestPermission,
+            onOpenAppSettings = userLocationState.openAppSettings,
+            modifier = modifier,
+        )
+        return
+    }
+
+    val myLocation = remember(state.userLatitude, state.userLongitude, userLocationState.location) {
+        state.userLatitude?.let { lat ->
+            state.userLongitude?.let { lng -> LatLng(lat, lng) }
+        } ?: userLocationState.location
+    }
+    val searchFocusLocation = remember(
+        state.searchAreaLatitude,
+        state.searchAreaLongitude,
+    ) {
+        state.searchAreaLatitude?.let { lat ->
+            state.searchAreaLongitude?.let { lng -> LatLng(lat, lng) }
+        }
+    }
+
+    LaunchedEffect(userLocationState.location, userLocationState.isPreciseLocation) {
+        userLocationState.location?.let { location ->
+            onIntent(
+                MapIntent.UserLocationUpdated(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    isPreciseLocation = userLocationState.isPreciseLocation,
+                ),
+            )
+        }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        MapStubBackground(colors = colors)
+        MapLibreMapView(
+            pins = state.visiblePins,
+            onPinClick = { onIntent(MapIntent.VehiclePinClicked(it)) },
+            cameraActions = mapCameraActions,
+            myLocation = myLocation,
+            focusMyLocation = state.shouldFocusMyLocation,
+            onMyLocationFocused = { onIntent(MapIntent.MyLocationFocusHandled) },
+            focusVisiblePins = state.shouldFocusVisiblePins,
+            onVisiblePinsFocused = { onIntent(MapIntent.VisiblePinsFocusHandled) },
+            searchFocusLocation = searchFocusLocation,
+            focusSearchArea = state.shouldFocusSearchArea,
+            onSearchAreaFocused = { onIntent(MapIntent.SearchAreaFocusHandled) },
+            modifier = Modifier.fillMaxSize(),
+        )
 
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val mapWidth = maxWidth
-            val mapHeight = maxHeight
-
-            state.visiblePins.forEach { pin ->
-                VehicleMapPin(
-                    pin = pin,
-                    colors = colors,
-                    modifier = Modifier.offset(
-                        x = mapWidth * pin.offsetXFraction,
-                        y = mapHeight * pin.offsetYFraction,
-                    ),
-                    onClick = { onIntent(MapIntent.VehiclePinClicked(pin.id)) },
-                )
-            }
+        if (state.isFilterSheetVisible) {
+            MapFilterSheet(
+                showOnlyAvailable = state.showOnlyAvailable,
+                selectedVehicleTypes = state.selectedVehicleTypes,
+                colors = colors,
+                onShowOnlyAvailableChanged = { onIntent(MapIntent.ShowOnlyAvailableChanged(it)) },
+                onVehicleTypeToggled = { onIntent(MapIntent.VehicleTypeFilterToggled(it)) },
+                onDismiss = { onIntent(MapIntent.FilterSheetDismissed) },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 76.dp),
+            )
         }
 
         MapSearchBar(
             query = state.searchQuery,
             colors = colors,
             onQueryChange = { onIntent(MapIntent.SearchQueryChanged(it)) },
+            onSearchSubmit = { onIntent(MapIntent.SearchSubmitted) },
             onFilterClick = { onIntent(MapIntent.FilterClicked) },
             modifier = Modifier
                 .align(Alignment.TopCenter)
+                .zIndex(2f)
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(top = 12.dp, bottom = 12.dp),
         )
 
-        Box(
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 250.dp)
-                .size(48.dp)
-                .shadow(8.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-                .background(colors.fabBackground)
-                .clickable { onIntent(MapIntent.MyLocationClicked) },
-            contentAlignment = Alignment.Center,
+                .padding(end = 16.dp, bottom = 250.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.End,
         ) {
-            Icon(
-                imageVector = Icons.Default.MyLocation,
-                contentDescription = "Konumum",
-                tint = colors.fabIcon,
-                modifier = Modifier.size(22.dp),
+            MapZoomButton(
+                icon = Icons.Default.Add,
+                contentDescription = "Yakınlaştır",
+                colors = colors,
+                onClick = mapCameraActions::zoomIn,
             )
+            MapZoomButton(
+                icon = Icons.Default.Remove,
+                contentDescription = "Uzaklaştır",
+                colors = colors,
+                onClick = mapCameraActions::zoomOut,
+            )
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(8.dp, RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(colors.fabBackground)
+                    .clickable {
+                        if (!userLocationState.hasPermission) {
+                            userLocationState.requestPermission()
+                        } else {
+                            val cachedLocation = myLocation ?: userLocationState.location
+                            if (cachedLocation != null) {
+                                onIntent(MapIntent.MyLocationClicked)
+                                onIntent(
+                                    MapIntent.UserLocationUpdated(
+                                        latitude = cachedLocation.latitude,
+                                        longitude = cachedLocation.longitude,
+                                        isPreciseLocation = userLocationState.isPreciseLocation,
+                                    ),
+                                )
+                                userLocationState.refreshAndGetLocation { refreshed ->
+                                    if (
+                                        refreshed != null &&
+                                        !sameCoordinates(refreshed, cachedLocation)
+                                    ) {
+                                        onIntent(
+                                            MapIntent.UserLocationUpdated(
+                                                latitude = refreshed.latitude,
+                                                longitude = refreshed.longitude,
+                                                isPreciseLocation = userLocationState.isPreciseLocation,
+                                            ),
+                                        )
+                                    }
+                                }
+                            } else {
+                                userLocationState.refreshAndGetLocation { location ->
+                                    onIntent(MapIntent.MyLocationClicked)
+                                    if (location != null) {
+                                        onIntent(
+                                            MapIntent.UserLocationUpdated(
+                                                latitude = location.latitude,
+                                                longitude = location.longitude,
+                                                isPreciseLocation = userLocationState.isPreciseLocation,
+                                            ),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "Konumum",
+                    tint = colors.fabIcon,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
 
         MapBottomSheet(
@@ -221,6 +338,92 @@ fun MapScreen(
             onIntent = onIntent,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+    }
+}
+
+private fun sameCoordinates(first: LatLng, second: LatLng): Boolean =
+    kotlin.math.abs(first.latitude - second.latitude) < 0.0001 &&
+        kotlin.math.abs(first.longitude - second.longitude) < 0.0001
+
+@Composable
+private fun MapZoomButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    colors: MapColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .shadow(8.dp, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.fabBackground)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = colors.fabIcon,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun MapPermissionDeniedScreen(
+    colors: MapColors,
+    shouldOpenSettings: Boolean,
+    onRequestPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.mapBackground),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Place,
+                contentDescription = null,
+                tint = colors.sheetSubtitle,
+                modifier = Modifier.size(64.dp),
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Konum izni gerekli",
+                color = colors.sheetTitle,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = if (shouldOpenSettings) {
+                    "İzin kalıcı olarak reddedildi. Ayarlardan konum iznini manuel olarak açmanız gerekiyor."
+                } else {
+                    "Haritayı ve yakındaki araçları görebilmek için konum izni vermeniz gerekiyor."
+                },
+                color = colors.sheetSubtitle,
+                fontSize = 15.sp,
+            )
+            Spacer(modifier = Modifier.height(28.dp))
+            Button(
+                onClick = if (shouldOpenSettings) onOpenAppSettings else onRequestPermission,
+                colors = ButtonDefaults.buttonColors(containerColor = RenCarBlue),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Text(
+                    text = if (shouldOpenSettings) "Ayarlara git" else "İzni tekrar iste",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        }
     }
 }
 
@@ -268,13 +471,151 @@ private fun MapStubBackground(colors: MapColors) {
 }
 
 @Composable
+private fun MapFilterSheet(
+    showOnlyAvailable: Boolean,
+    selectedVehicleTypes: Set<VehicleType>,
+    colors: MapColors,
+    onShowOnlyAvailableChanged: (Boolean) -> Unit,
+    onVehicleTypeToggled: (VehicleType) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.searchBackground)
+            .border(1.dp, colors.searchBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Filtreler",
+                color = colors.searchText,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Kapat",
+                color = RenCarBlue,
+                fontSize = 14.sp,
+                modifier = Modifier.clickable(onClick = onDismiss),
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Araç tipi",
+            color = colors.searchText,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text = "Birden fazla tip seçebilirsiniz. Seçim yoksa tüm tipler gösterilir.",
+            color = colors.searchPlaceholder,
+            fontSize = 12.sp,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            VehicleType.entries.forEach { type ->
+                FilterTypeChip(
+                    label = type.displayLabel(),
+                    isSelected = type in selectedVehicleTypes,
+                    colors = colors,
+                    onClick = { onVehicleTypeToggled(type) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Yalnızca müsait araçlar",
+                    color = colors.searchText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = "Kullanımdaki araçları haritadan gizler",
+                    color = colors.searchPlaceholder,
+                    fontSize = 12.sp,
+                )
+            }
+            Switch(
+                checked = showOnlyAvailable,
+                onCheckedChange = onShowOnlyAvailableChanged,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = RenCarBlue,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterTypeChip(
+    label: String,
+    isSelected: Boolean,
+    colors: MapColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val background = if (isSelected) colors.chipActiveBackground else colors.chipInactiveBackground
+    val textColor = if (isSelected) colors.chipActiveText else colors.chipInactiveText
+    val borderColor = if (isSelected) colors.chipActiveBackground else colors.searchBorder
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(background)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            fontSize = 13.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+        )
+    }
+}
+
+private fun VehicleType.displayLabel(): String =
+    when (this) {
+        VehicleType.SEDAN -> "Sedan"
+        VehicleType.HATCHBACK -> "Hatchback"
+        VehicleType.SUV -> "SUV"
+        VehicleType.STATION -> "Station"
+        VehicleType.MINIVAN -> "Minivan"
+    }
+
+@Composable
 private fun MapSearchBar(
     query: String,
     colors: MapColors,
     onQueryChange: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
     onFilterClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -294,28 +635,52 @@ private fun MapSearchBar(
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = null,
+                contentDescription = "Ara",
                 tint = colors.searchPlaceholder,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable {
+                        keyboardController?.hide()
+                        onSearchSubmit()
+                    },
             )
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester),
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(
+                textStyle = TextStyle(
                     color = colors.searchText,
                     fontSize = 15.sp,
                 ),
-                decorationBox = { inner ->
-                    if (query.isEmpty()) {
-                        Text(
-                            text = "Nereden araç alacaksın?",
-                            color = colors.searchPlaceholder,
-                            fontSize = 15.sp,
-                        )
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = true,
+                    imeAction = ImeAction.Search,
+                ),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        keyboardController?.hide()
+                        onSearchSubmit()
+                    },
+                ),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (query.isEmpty()) {
+                            Text(
+                                text = "Nereden araç alacaksın?",
+                                color = colors.searchPlaceholder,
+                                fontSize = 15.sp,
+                            )
+                        }
+                        innerTextField()
                     }
-                    inner()
                 },
             )
         }
@@ -409,7 +774,6 @@ private fun MapBottomSheet(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -424,21 +788,6 @@ private fun MapBottomSheet(
                     text = state.areaLabel,
                     color = colors.sheetSubtitle,
                     fontSize = 13.sp,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.chipInactiveBackground)
-                    .clickable { onIntent(MapIntent.FilterClicked) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = "Filtre",
-                    tint = colors.sheetSubtitle,
-                    modifier = Modifier.size(20.dp),
                 )
             }
         }
@@ -557,9 +906,8 @@ private fun MapScreenLightPreview() {
     RenCarAppTheme(darkTheme = false, dynamicColor = false) {
         MapScreen(
             state = MapUiState(
-                visiblePins = listOf(
-                    MapVehiclePin("1", "₺28", VehicleCategory.ECONOMIC, 0.3f, 0.3f),
-                ),
+                nearbyCount = 0,
+                areaLabel = "Üsküdar çevresinde · 3 dk uzaklıkta",
             ),
             onIntent = {},
         )

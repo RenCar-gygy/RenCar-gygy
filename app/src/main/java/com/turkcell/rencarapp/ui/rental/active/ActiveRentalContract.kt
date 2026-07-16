@@ -2,21 +2,37 @@ package com.turkcell.rencarapp.ui.rental.active
 
 data class ActiveRentalUiState(
     val rentalId: String = "",
-    val vehicleName: String = "Renault Clio",
-    val duration: String = "00:24:18",
-    val currentPrice: String = "₺108,00",
-    val distance: String = "12,4 km",
+    val vehicleName: String = "",
+    val vehiclePlate: String = "",
+    val duration: String = "00:00:00",
+    val currentPrice: String = "₺0,00",
+    val distance: String = "0,0 km",
     val isLocked: Boolean = true,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val remainingReservationSeconds: Int? = null,
+    val isReservationActive: Boolean = false,
+    val isPreparingRental: Boolean = false,
+    val canCancelRental: Boolean = false,
+    val isVehicleLocationPending: Boolean = false,
+    val vehicleLatitude: Double? = null,
+    val vehicleLongitude: Double? = null,
 )
 
 sealed interface ActiveRentalIntent {
     data object LoadRental : ActiveRentalIntent
     data object ToggleLock : ActiveRentalIntent
     data object FinishRental : ActiveRentalIntent
+    data object CancelRentalClicked : ActiveRentalIntent
 }
 
 sealed interface ActiveRentalEffect {
-    data object NavigateToMain : ActiveRentalEffect
+    data class NavigateToStartPhotos(
+        val rentalId: String,
+        val vehicleName: String,
+        val vehiclePlate: String
+    ) : ActiveRentalEffect
+    data class NavigateToSummary(val rentalId: String) : ActiveRentalEffect
     data class ShowMessage(val message: String) : ActiveRentalEffect
+    data object NavigateBackAfterCancel : ActiveRentalEffect
 }
