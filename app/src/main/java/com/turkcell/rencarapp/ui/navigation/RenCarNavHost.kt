@@ -366,11 +366,16 @@ fun RenCarNavHost(
                     ) {
                         StartPhotosRoute(
                             onNavigateBack = { navController.popBackStack() },
-                            onRideStarted = {
-                                navController.previousBackStackEntry
-                                    ?.savedStateHandle
-                                    ?.set(ActiveRentalViewModel.RIDE_STARTED_KEY, true)
+                            onRideStarted = { rentalId ->
                                 navController.popBackStack()
+                                runCatching {
+                                    navController.getBackStackEntry(
+                                        RenCarDestination.activeRentalRoute(rentalId)
+                                    ).savedStateHandle.apply {
+                                        set(ActiveRentalViewModel.RIDE_STARTED_KEY, true)
+                                        set(ActiveRentalViewModel.DAILY_START_PHOTOS_COMPLETED_KEY, true)
+                                    }
+                                }
                             }
                         )
                     }

@@ -111,6 +111,9 @@ class DefaultRentalRepository @Inject constructor(
         if (request.method == PaymentMethod.CARD && request.cardId.isNullOrBlank()) {
             return Result.failure(IllegalArgumentException("Kart ile ödeme için kayıtlı bir kart seçin."))
         }
+        if (request.method == PaymentMethod.IYZICO && request.iyzicoPaymentId.isNullOrBlank()) {
+            return Result.failure(IllegalArgumentException("İyzico ödeme kimliği eksik."))
+        }
         return authorizedCall { authorization ->
             rentalApi.pay(
                 authorization = authorization,
@@ -118,7 +121,8 @@ class DefaultRentalRepository @Inject constructor(
                 body = PayRentalDto(
                     method = request.method.name,
                     cardId = if (request.method == PaymentMethod.CARD) request.cardId else null,
-                    discountCode = request.discountCode,
+                    discountCode = if (request.method == PaymentMethod.IYZICO) null else request.discountCode,
+                    iyzicoPaymentId = if (request.method == PaymentMethod.IYZICO) request.iyzicoPaymentId else null,
                 ),
             ).toDomain()
         }

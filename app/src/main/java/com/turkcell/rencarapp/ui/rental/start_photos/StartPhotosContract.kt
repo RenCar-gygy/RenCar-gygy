@@ -11,6 +11,8 @@ data class StartPhotosUiState(
     val isLoading: Boolean = false,
     val isSubmittingPhotos: Boolean = false,
     val error: String? = null,
+    /** Günlük planda API yalnızca PREPARING'de foto kabul eder; ACTIVE'de yerel doğrulama. */
+    val isDailyLocalPhotos: Boolean = false,
 ) {
     val capturedCount: Int = photos.values.count { it != null }
     val isComplete: Boolean = capturedCount == PhotoDirection.entries.size
@@ -51,7 +53,7 @@ sealed interface StartPhotosIntent {
 
 sealed interface StartPhotosEffect {
     data object NavigateBack : StartPhotosEffect
-    data object RideStarted : StartPhotosEffect
+    data class RideStarted(val rentalId: String) : StartPhotosEffect
     data class LaunchCamera(val direction: PhotoDirection) : StartPhotosEffect
     data class ShowError(val message: String) : StartPhotosEffect
 }

@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.network.ApiErrorContext
 import com.turkcell.rencarapp.data.network.toUserMessage
 import com.turkcell.rencarapp.data.rental.RentalPhotoStub
+import com.turkcell.rencarapp.data.rental.RentalPlan
 import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.rental.RentalStatus
+import com.turkcell.rencarapp.data.rental.RentalUnlockSession
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
 import com.turkcell.rencarapp.ui.rental.delivery_photos.MARKED_PHOTO_URI
 import com.turkcell.rencarapp.ui.rental.delivery_photos.PhotoDirection
@@ -24,10 +27,13 @@ import javax.inject.Inject
 class StartPhotosViewModel @Inject constructor(
     private val rentalRepository: RentalRepository,
     private val vehicleRepository: VehicleRepository,
+    private val unlockSession: RentalUnlockSession,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val rentalId: String = checkNotNull(savedStateHandle["rentalId"])
+    private var rentalPlan: RentalPlan = RentalPlan.PER_MINUTE
+    private var rentalStatus: RentalStatus = RentalStatus.PREPARING
     private val navVehicleName: String = savedStateHandle.get<String>("name").orEmpty()
     private val navVehiclePlate: String = savedStateHandle.get<String>("plate").orEmpty()
 
@@ -60,12 +66,19 @@ class StartPhotosViewModel @Inject constructor(
         }
     }
 
+    private fun isDailyLocalPhotosFlow(): Boolean =
+        rentalPlan == RentalPlan.DAILY && rentalStatus == RentalStatus.ACTIVE
+
     private fun loadInitialState() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             rentalRepository.getById(rentalId)
                 .onSuccess { rental ->
+                    rentalPlan = rental.plan
+                    rentalStatus = rental.status
+                    val dailyLocal = isDailyLocalPhotosFlow()
+                    _uiState.update { it.copy(isDailyLocalPhotos = dailyLocal) }
                     vehicleRepository.getById(rental.vehicleId)
                         .onSuccess { vehicle ->
                             _uiState.update {
@@ -76,6 +89,10 @@ class StartPhotosViewModel @Inject constructor(
                                 )
                             }
                         }
+                    if (dailyLocal) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        return@onSuccess
+                    }
                 }
 
             rentalRepository.getPhotos(rentalId)
@@ -104,7 +121,25 @@ class StartPhotosViewModel @Inject constructor(
         }
     }
 
+    private fun markPhotoCapturedLocally(direction: PhotoDirection) {
+        val updatedPhotos = _uiState.value.photos.toMutableMap()
+        updatedPhotos[direction] = MARKED_PHOTO_URI
+        _uiState.update { it.copy(photos = updatedPhotos, isSubmittingPhotos = false) }
+    }
+
     private fun uploadCapturedPhoto(direction: PhotoDirection, bytes: ByteArray) {
+        if (bytes.isEmpty()) {
+            viewModelScope.launch {
+                _effect.send(StartPhotosEffect.ShowError("Fotoğraf çekilemedi. Lütfen tekrar deneyin."))
+            }
+            return
+        }
+
+        if (isDailyLocalPhotosFlow()) {
+            markPhotoCapturedLocally(direction)
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingPhotos = true, error = null) }
 
@@ -113,9 +148,7 @@ class StartPhotosViewModel @Inject constructor(
                 side = direction.name,
                 bytes = bytes
             ).onSuccess {
-                val updatedPhotos = _uiState.value.photos.toMutableMap()
-                updatedPhotos[direction] = MARKED_PHOTO_URI
-                _uiState.update { it.copy(photos = updatedPhotos, isSubmittingPhotos = false) }
+                markPhotoCapturedLocally(direction)
             }.onFailure { error ->
                 _uiState.update { it.copy(isSubmittingPhotos = false) }
                 _effect.send(
@@ -133,10 +166,18 @@ class StartPhotosViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingPhotos = true, error = null) }
 
+            if (isDailyLocalPhotosFlow()) {
+                _uiState.update { it.copy(isSubmittingPhotos = false) }
+                unlockSession.markDailyStartPhotosCompleted(rentalId)
+                _effect.send(StartPhotosEffect.RideStarted(rentalId))
+                return@launch
+            }
+
             rentalRepository.start(rentalId)
                 .onSuccess {
                     _uiState.update { it.copy(isSubmittingPhotos = false) }
-                    _effect.send(StartPhotosEffect.RideStarted)
+                    unlockSession.markDailyStartPhotosCompleted(rentalId)
+                    _effect.send(StartPhotosEffect.RideStarted(rentalId))
                 }
                 .onFailure { error ->
                     _uiState.update { it.copy(isSubmittingPhotos = false) }

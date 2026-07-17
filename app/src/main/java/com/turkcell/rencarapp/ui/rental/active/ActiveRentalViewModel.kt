@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.turkcell.rencarapp.data.network.ApiErrorContext
 import com.turkcell.rencarapp.data.network.toUserMessage
 import com.turkcell.rencarapp.data.rental.RentalRepository
+import com.turkcell.rencarapp.data.rental.RentalPlan
 import com.turkcell.rencarapp.data.rental.RentalStatus
+import com.turkcell.rencarapp.data.rental.RentalUnlockSession
 import com.turkcell.rencarapp.data.rental.RideLocationClient
 import com.turkcell.rencarapp.data.reservation.ReservationRepository
 import com.turkcell.rencarapp.data.vehicle.VehicleRepository
@@ -29,11 +31,15 @@ class ActiveRentalViewModel @Inject constructor(
     private val reservationRepository: ReservationRepository,
     private val vehicleRepository: VehicleRepository,
     private val rideLocationClient: RideLocationClient,
-    savedStateHandle: SavedStateHandle
+    private val unlockSession: RentalUnlockSession,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val navRentalId: String? = savedStateHandle["rentalId"]
-    private var awaitingRideStart: Boolean = !navRentalId.isNullOrBlank()
+    private var awaitingRideStart: Boolean = run {
+        val id = navRentalId.orEmpty()
+        id.isNotBlank() && !unlockSession.isRideStarted(id)
+    }
 
     private val _uiState = MutableStateFlow(
         ActiveRentalUiState(
@@ -60,6 +66,7 @@ class ActiveRentalViewModel @Inject constructor(
                 }
             }
         }
+        resumeRideIfStartPhotosCompleted()
     }
 
     override fun onCleared() {
@@ -76,6 +83,28 @@ class ActiveRentalViewModel @Inject constructor(
             is ActiveRentalIntent.CancelRentalClicked -> cancelRental()
         }
     }
+
+    fun onScreenResumed() {
+        resumeRideIfStartPhotosCompleted()
+    }
+
+    private fun resumeRideIfStartPhotosCompleted() {
+        val rentalId = currentRentalId()
+        if (rentalId.isBlank() || !awaitingRideStart) return
+
+        if (savedStateHandle.get<Boolean>(RIDE_STARTED_KEY) == true) {
+            savedStateHandle[RIDE_STARTED_KEY] = false
+            markRideStarted()
+            return
+        }
+
+        if (unlockSession.isDailyStartPhotosCompleted(rentalId)) {
+            markRideStarted()
+        }
+    }
+
+    private fun currentRentalId(): String =
+        _uiState.value.rentalId.ifBlank { navRentalId.orEmpty() }
 
     private fun handleToggleLock() {
         if (awaitingRideStart && _uiState.value.isLocked) {
@@ -105,7 +134,17 @@ class ActiveRentalViewModel @Inject constructor(
                 .onSuccess { rental ->
                     when (rental.status) {
                         RentalStatus.PREPARING -> navigateToStartPhotos()
-                        RentalStatus.ACTIVE -> markRideStarted()
+                        RentalStatus.ACTIVE -> {
+                            if (rental.plan == RentalPlan.DAILY && awaitingRideStart) {
+                                if (unlockSession.isDailyStartPhotosCompleted(rental.id)) {
+                                    markRideStarted()
+                                } else {
+                                    navigateToStartPhotos()
+                                }
+                            } else {
+                                markRideStarted()
+                            }
+                        }
                         else -> {
                             _uiState.update { it.copy(isLoading = false) }
                             _effect.send(ActiveRentalEffect.ShowMessage("Kiralama bu aşamada başlatılamıyor."))
@@ -135,7 +174,12 @@ class ActiveRentalViewModel @Inject constructor(
     }
 
     private fun markRideStarted() {
+        val rentalId = currentRentalId()
         awaitingRideStart = false
+        if (rentalId.isNotBlank()) {
+            unlockSession.markRideStarted(rentalId)
+        }
+        savedStateHandle[DAILY_START_PHOTOS_COMPLETED_KEY] = true
         _uiState.update {
             it.copy(
                 isPreparingRental = false,
@@ -170,6 +214,7 @@ class ActiveRentalViewModel @Inject constructor(
                     }
                     rentalRepository.cancel(rentalId)
                         .onSuccess {
+                            unlockSession.clear(rentalId)
                             _uiState.update { it.copy(isLoading = false) }
                             _effect.send(ActiveRentalEffect.NavigateBackAfterCancel)
                         }
@@ -200,6 +245,16 @@ class ActiveRentalViewModel @Inject constructor(
                 rentalRepository.getActive()
                     .onSuccess { activeRental ->
                         val status = activeRental.status.toRentalStatus()
+                        val rentalId = activeRental.id
+
+                        if (
+                            awaitingRideStart &&
+                            status == RentalStatus.ACTIVE &&
+                            unlockSession.isDailyStartPhotosCompleted(rentalId)
+                        ) {
+                            markRideStarted()
+                        }
+
                         val isServerPreparing = status == RentalStatus.PREPARING
                         val showAwaitingUnlock = awaitingRideStart && status == RentalStatus.ACTIVE
 
@@ -432,6 +487,7 @@ class ActiveRentalViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             rentalRepository.finish(currentRentalId)
                 .onSuccess {
+                    unlockSession.clear(currentRentalId)
                     _uiState.update { it.copy(isLoading = false) }
                     _effect.send(ActiveRentalEffect.NavigateToSummary(rentalId = currentRentalId))
                 }
@@ -448,6 +504,7 @@ class ActiveRentalViewModel @Inject constructor(
 
     companion object {
         const val RIDE_STARTED_KEY = "rideStarted"
+        const val DAILY_START_PHOTOS_COMPLETED_KEY = "dailyStartPhotosCompleted"
     }
 }
 

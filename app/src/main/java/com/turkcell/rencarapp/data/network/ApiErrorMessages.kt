@@ -42,6 +42,8 @@ fun ApiException.toUserMessage(context: ApiErrorContext): String =
                 "Zaten aktif bir kiralama veya rezervasyonunuz var."
             ApiErrorContext.RENTAL_START ->
                 "Kiralama başlatılamadı. Önce dört yön fotoğrafı gerekir; tekrar deneyin."
+            ApiErrorContext.RENTAL_PHOTO ->
+                "Fotoğraf yüklenemedi. Yolculuk hazırlık aşamasında değilse (günlük plan) bu adım sunucuya gönderilmez."
             ApiErrorContext.RENTAL_CANCEL ->
                 "Kiralama iptal edilemedi. Yalnızca henüz başlamamış (hazırlık) yolculuk iptal edilebilir; aktif yolculuk için «Kiralamayı Bitir» kullanın."
             ApiErrorContext.RENTAL_PAY ->

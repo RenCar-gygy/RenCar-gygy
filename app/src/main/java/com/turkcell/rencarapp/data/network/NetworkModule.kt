@@ -14,6 +14,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
+import com.turkcell.rencarapp.data.auth.AuthorizedRequestExecutor
 import com.turkcell.rencarapp.data.network.api.IyzicoApi
 import com.turkcell.rencarapp.data.payment.DefaultIyzicoRepository
 import com.turkcell.rencarapp.data.payment.IyzicoRepository
@@ -97,7 +98,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideIyzicoRepository(api: IyzicoApi): IyzicoRepository {
-        return DefaultIyzicoRepository(api)
+    fun provideIyzicoRepository(
+        api: IyzicoApi,
+        authorizedRequestExecutor: AuthorizedRequestExecutor,
+    ): IyzicoRepository {
+        return DefaultIyzicoRepository(api, authorizedRequestExecutor)
     }
 }

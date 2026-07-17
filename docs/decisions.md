@@ -420,3 +420,12 @@
 
 - **Sorun:** `includeBusy=true` ile gösterilen gri pinlere tıklanınca `GET /vehicles/{id}` 404 dönüyordu (API: müsait olmayan araç yalnızca aktif kiracıya görünür); kullanıcıya «İstenen kayıt bulunamadı» çıkıyordu.
 - **Davranış:** Gri pin (`isInUse`) tıklanınca detaya gitme; «Bu araç şu anda müsait değil.» snackbar. Kendi aktif kiralama/rezervasyonundaki araç (`activeSession.vehicleId`) istisna — detay açılır.
+
+---
+
+### İyzico ödeme + günlük teslim fotoğrafları (feature/iyzico — 17.07.2026)
+
+- **Özet ekranı:** Buton metni «Ödemeyi Yap»; ödeme yöntemi: Cüzdan / Kart / İyzico (yatay seçim).
+- **İyzico akışı:** `POST /iyzico/checkout-form/initialize` (`status=success`, `basketId=rental-{id}`, `price=toplam`, `enabledInstallments=[1,2,3,6,9,12]`) → WebView `paymentPageUrl` (yoksa `checkoutFormContent` HTML) → callback `/iyzico/checkout-form/callback` → `GET /iyzico/checkout-form/result/{token}` (5×1 sn poll, `SUCCESS`) → `POST /rentals/{id}/pay` (`method=IYZICO`, `iyzicoPaymentId`; indirim kodu gönderilmez). `tokenExpireTime` ile oturum süresi izlenir.
+- **Veri katmanı:** `IyzicoDtos.kt` OpenAPI hizalı; `DefaultIyzicoRepository` bearer ile çağırır; `PayRentalDto.iyzicoPaymentId` eklendi.
+- **Günlük kiralama:** Araç tesliminde (ilk kilidi açma) aynı foto ekranı gösterilir; OpenAPI günlük planda `POST /photos` kabul etmediği için fotoğraflar **yalnızca yerelde** işaretlenir (`isDailyLocalPhotos`), `POST /start` çağrılmaz. Foto tamamlama ve sürüş başlangıcı `RentalUnlockSession` ile tutulur; aktif ekrana dönünce kilidi otomatik açılır (dk/sa gibi tek «Kilidi Aç» giriş noktası).
