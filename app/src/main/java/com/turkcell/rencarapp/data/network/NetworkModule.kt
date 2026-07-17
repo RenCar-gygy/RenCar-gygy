@@ -14,6 +14,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
+import com.turkcell.rencarapp.data.network.api.IyzicoApi
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -85,4 +86,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideCardApi(retrofit: Retrofit): CardApi = retrofit.create(CardApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideIyzicoApi(retrofit: Retrofit): IyzicoApi {
+        return retrofit.create(IyzicoApi::class.java)
+    }
 }
