@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
 import com.turkcell.rencarapp.data.network.api.IyzicoApi
+import com.turkcell.rencarapp.data.payment.DefaultIyzicoRepository
+import com.turkcell.rencarapp.data.payment.IyzicoRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -91,5 +93,11 @@ object NetworkModule {
     @Singleton
     fun provideIyzicoApi(retrofit: Retrofit): IyzicoApi {
         return retrofit.create(IyzicoApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIyzicoRepository(api: IyzicoApi): IyzicoRepository {
+        return DefaultIyzicoRepository(api)
     }
 }
