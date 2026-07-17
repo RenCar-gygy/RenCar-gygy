@@ -46,12 +46,14 @@ data class CreateRentalRequest(
 enum class PaymentMethod {
     WALLET,
     CARD,
+    IYZICO,
 }
 
 data class PayRentalRequest(
     val method: PaymentMethod,
     val cardId: String? = null,
     val discountCode: String? = null,
+    val iyzicoPaymentId: String? = null,
 )
 
 data class PayRentalResult(

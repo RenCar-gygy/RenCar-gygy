@@ -1,39 +1,33 @@
 package com.turkcell.rencarapp.data.network.api
 
-import com.turkcell.rencarapp.data.network.dto.*
-import retrofit2.Response
+import com.turkcell.rencarapp.data.network.dto.CheckoutFormInitializeResponseDto
+import com.turkcell.rencarapp.data.network.dto.HealthResponse
+import com.turkcell.rencarapp.data.network.dto.InitializeCheckoutFormDto
+import com.turkcell.rencarapp.data.network.dto.IyzicoPaymentResponseDto
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 
+/**
+ * Iyzico API — OpenAPI /iyzico uçları.
+ * Tek kaynak: https://rencarv2.halitkalayci.com/api/openapi.json
+ */
 interface IyzicoApi {
 
-    @GET("/iyzico/health")
-    suspend fun checkHealth(): Response<HealthResponse>
+    @GET("iyzico/health")
+    suspend fun checkHealth(): HealthResponse
 
-    @POST("/iyzico/payments")
-    suspend fun processDirectPayment(
-        @Body request: DirectPaymentRequest
-    ): Response<PaymentResponse>
-
-    @POST("/iyzico/payments/threeds/initialize")
-    suspend fun initialize3DSPayment(
-        @Body request: ThreeDSInitializeRequest
-    ): Response<ThreeDSInitializeResponse>
-
-    @POST("/iyzico/checkout-form/initialize")
+    @POST("iyzico/checkout-form/initialize")
     suspend fun initializeCheckoutForm(
-        @Body request: CheckoutFormRequest
-    ): Response<CheckoutFormInitializeResponse>
+        @Header("Authorization") authorization: String,
+        @Body request: InitializeCheckoutFormDto,
+    ): CheckoutFormInitializeResponseDto
 
-    @GET("/iyzico/checkout-form/result/{token}")
+    @GET("iyzico/checkout-form/result/{token}")
     suspend fun getCheckoutFormResult(
-        @Path("token") token: String
-    ): Response<CheckoutFormResultResponse>
-
-    @GET("/iyzico/payments/{paymentId}")
-    suspend fun getPaymentStatus(
-        @Path("paymentId") paymentId: String
-    ): Response<PaymentStatusResponse>
+        @Header("Authorization") authorization: String,
+        @Path("token") token: String,
+    ): IyzicoPaymentResponseDto
 }

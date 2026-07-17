@@ -255,6 +255,7 @@ data class PayRentalDto(
     val method: String,
     val cardId: String? = null,
     val discountCode: String? = null,
+    val iyzicoPaymentId: String? = null,
 )
 
 @Serializable

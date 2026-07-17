@@ -30,7 +30,7 @@ fun RentalPlan.durationLabel(): String =
 
 fun RentalPlan.requiresScheduledEndDate(): Boolean = this == RentalPlan.DAILY
 
-fun RentalPlan.requiresStartPhotos(): Boolean = this != RentalPlan.DAILY
+fun RentalPlan.requiresStartPhotos(): Boolean = true
 
 private const val MINUTES_PER_CALENDAR_DAY = 1440
 

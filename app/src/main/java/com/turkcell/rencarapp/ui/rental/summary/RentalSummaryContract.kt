@@ -7,9 +7,16 @@ sealed interface RentalSummaryIntent {
     data object ChangePaymentMethodClicked : RentalSummaryIntent
     data object DismissPaymentMethodSheet : RentalSummaryIntent
     data object SelectWalletPayment : RentalSummaryIntent
+    data object SelectIyzicoPayment : RentalSummaryIntent
     data class SelectCardPayment(val cardId: String) : RentalSummaryIntent
+    data object AddCardClicked : RentalSummaryIntent
+    data object DismissAddCardSheet : RentalSummaryIntent
+    data class SubmitNewCard(val number: String, val expiry: String) : RentalSummaryIntent
     data class DiscountCodeChanged(val code: String) : RentalSummaryIntent
     data object NavigateHomeClicked : RentalSummaryIntent
+    data object DismissIyzicoCheckout : RentalSummaryIntent
+    data object IyzicoCheckoutCompleted : RentalSummaryIntent
+    data object IyzicoCheckoutSessionExpired : RentalSummaryIntent
 }
 
 sealed interface RentalSummaryEffect {
@@ -49,5 +56,12 @@ data class RentalSummaryUiState(
     val selectedCardId: String? = null,
     val availableCards: List<PaymentCardOption> = emptyList(),
     val showPaymentMethodSheet: Boolean = false,
+    val showAddCardSheet: Boolean = false,
+    val isAddingCard: Boolean = false,
     val discountCodeInput: String = "",
+    val showIyzicoCheckout: Boolean = false,
+    val iyzicoPaymentPageUrl: String? = null,
+    val iyzicoCheckoutFormContent: String? = null,
+    val iyzicoCheckoutToken: String? = null,
+    val iyzicoCheckoutExpiresAtEpochMs: Long? = null,
 )

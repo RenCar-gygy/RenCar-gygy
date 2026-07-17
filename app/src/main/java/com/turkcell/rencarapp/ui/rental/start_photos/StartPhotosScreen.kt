@@ -36,7 +36,7 @@ private val RenCarBlueGlow = Color(0x662563EB)
 @Composable
 fun StartPhotosRoute(
     onNavigateBack: () -> Unit,
-    onRideStarted: () -> Unit,
+    onRideStarted: (rentalId: String) -> Unit,
     viewModel: StartPhotosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -76,7 +76,7 @@ fun StartPhotosRoute(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is StartPhotosEffect.NavigateBack -> onNavigateBack()
-                is StartPhotosEffect.RideStarted -> onRideStarted()
+                is StartPhotosEffect.RideStarted -> onRideStarted(effect.rentalId)
                 is StartPhotosEffect.LaunchCamera -> requestCamera(effect.direction)
                 is StartPhotosEffect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
@@ -288,7 +288,11 @@ fun StartPhotosScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Fotoğraflar kiralama öncesi aracın durumunu kaydetmek içindir. Hasarlı bölgeleri yakından çekebilirsiniz.",
+                        text = if (state.isDailyLocalPhotos) {
+                            "Günlük planda fotoğraflar cihazınızda teslim kaydı olarak tutulur; sunucuya yüklenmez. Hasarlı bölgeleri yakından çekebilirsiniz."
+                        } else {
+                            "Fotoğraflar kiralama öncesi aracın durumunu kaydetmek içindir. Hasarlı bölgeleri yakından çekebilirsiniz."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isDark) Color(0xFFBFDBFE) else Color(0xFF475569),
                         lineHeight = 18.sp
