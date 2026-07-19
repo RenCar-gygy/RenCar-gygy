@@ -170,39 +170,8 @@ Uygulama, merkezi bir `AuthorizedRequestExecutor` yapısı üzerinden tüm ağ i
 ---
 
 ## 8. Klasör Yapısı
-com.turkcell.rencarapp
-├── core                        // Projenin İskeleti (Bağımsız ve Ortak Araçlar)
-│   ├── common                  // Base sınıflar (BaseViewModel vb.), extension fonksiyonlar
-│   ├── di                      // Ortak Hilt modülleri (NetworkModule, AppModule vb.)
-│   ├── network                 // Retrofit client ayarları, Interceptor'lar, Result/Resource wrapper'ları
-│   ├── theme                   // Jetpack Compose teması (Color, Typography, Shape)
-│   └── navigation              // Navigasyon rotaları ve Navigation Graph tanımları
-│
-├── data                        // Veri Katmanı (Ortak)
-│   ├── local                   // DataStore (Session vb.), Room Database (gerekiyorsa)
-│   └── remote                  // Temel API servisleri ve ortak DTO'lar
-│
-├── domain                      // Uygulamanın Kalbi: İş Kuralları (Business Logic)
-│   ├── model                   // Saf Kotlin modelleri (Vehicle, User, Wallet vb.)
-│   ├── repository              // Ortak Repository interface'leri
-│   └── usecase                 // Ortak kullanım senaryoları (Örn: GetUserProfileUseCase)
-│
-├── feature                     // 
-│   ├── auth                    
-│   ├── payment                 // Iyzico ödeme entegrasyonu
-│   │   ├── domain              // Sadece ödemeyi ilgilendiren UseCase ve Interface'ler
-│   │   ├── data                // PaymentRepositoryImpl, spesifik DTO'lar
-│   │   └── presentation        // MVI Contract (Intent, State, Effect), ViewModel ve Compose Ekranı
-│   ├── rental                  // Kiralama süreci
-│   ├── reservation             
-│   ├── map                     // Harita ve konum işlemleri
-│   ├── onboarding              
-│   ├── profile                 
-│   ├── vehicle                 // Araç listeleme, detaylar
-│   └── wallet                  // Cüzdan işlemleri
-│
-├── MainActivity.kt
-└── RenCarApplication.kt
+<img width="666" height="637" alt="image" src="https://github.com/user-attachments/assets/95b62d5e-f52b-4430-b891-d6a7b95d1a2f" />
+
 
 ## 9. Kurulum ve Çalıştırma
 
@@ -212,7 +181,8 @@ com.turkcell.rencarapp
 4. Gerekli API anahtarları ve Base URL yapılandırması `decisions.md` dosyasındaki güncel değerlere göre `NetworkModule` içinde kontrol edilmelidir.
 5. Uygulamayı bir emülatör veya fiziksel cihazda çalıştırın.
 
-
+## 10.Proje Akışı
+<img width="587" height="690" alt="image" src="https://github.com/user-attachments/assets/4b91ef44-81a4-4a9b-9b96-c5b0ad5b9a33" />
 
 ---
 *Bu proje Turkcell Android Geliştirme Programı kapsamında bir bitirme projesi olarak hazırlanmıştır.*
