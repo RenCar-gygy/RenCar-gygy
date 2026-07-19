@@ -170,22 +170,39 @@ Uygulama, merkezi bir `AuthorizedRequestExecutor` yapısı üzerinden tüm ağ i
 ---
 
 ## 8. Klasör Yapısı
-
-```text
-com.turkcell.rencarapp/
-├── data/               # Repository, DTO ve API tanımları
-│   ├── auth/           # Oturum ve kullanıcı yönetimi
-│   ├── vehicle/        # Araç listeleme ve detay
-│   ├── rental/         # Kiralama ve rezervasyon işlemleri
-│   └── network/        # Retrofit modülleri ve interceptor'lar
-├── ui/                 # Sunum katmanı (MVI)
-│   ├── navigation/     # NavHost ve Route tanımları
-│   ├── components/     # Ortak UI bileşenleri
-│   └── <feature>/      # Contract, ViewModel ve Screen dosyaları
-└── di/                 # Hilt modülleri (Dependency Injection)
-```
-
----
+com.turkcell.rencarapp
+├── core                        // Projenin İskeleti (Bağımsız ve Ortak Araçlar)
+│   ├── common                  // Base sınıflar (BaseViewModel vb.), extension fonksiyonlar
+│   ├── di                      // Ortak Hilt modülleri (NetworkModule, AppModule vb.)
+│   ├── network                 // Retrofit client ayarları, Interceptor'lar, Result/Resource wrapper'ları
+│   ├── theme                   // Jetpack Compose teması (Color, Typography, Shape)
+│   └── navigation              // Navigasyon rotaları ve Navigation Graph tanımları
+│
+├── data                        // Veri Katmanı (Ortak)
+│   ├── local                   // DataStore (Session vb.), Room Database (gerekiyorsa)
+│   └── remote                  // Temel API servisleri ve ortak DTO'lar
+│
+├── domain                      // Uygulamanın Kalbi: İş Kuralları (Business Logic)
+│   ├── model                   // Saf Kotlin modelleri (Vehicle, User, Wallet vb.)
+│   ├── repository              // Ortak Repository interface'leri
+│   └── usecase                 // Ortak kullanım senaryoları (Örn: GetUserProfileUseCase)
+│
+├── feature                     // 
+│   ├── auth                    
+│   ├── payment                 // Iyzico ödeme entegrasyonu
+│   │   ├── domain              // Sadece ödemeyi ilgilendiren UseCase ve Interface'ler
+│   │   ├── data                // PaymentRepositoryImpl, spesifik DTO'lar
+│   │   └── presentation        // MVI Contract (Intent, State, Effect), ViewModel ve Compose Ekranı
+│   ├── rental                  // Kiralama süreci
+│   ├── reservation             
+│   ├── map                     // Harita ve konum işlemleri
+│   ├── onboarding              
+│   ├── profile                 
+│   ├── vehicle                 // Araç listeleme, detaylar
+│   └── wallet                  // Cüzdan işlemleri
+│
+├── MainActivity.kt
+└── RenCarApplication.kt
 
 ## 9. Kurulum ve Çalıştırma
 
